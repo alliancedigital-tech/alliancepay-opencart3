@@ -1,0 +1,252 @@
+{{ header }}{{ column_left }}
+<div id="content">
+  <div class="page-header">
+    <div class="container-fluid">
+      <div class="pull-right">
+        <button type="submit" form="form-alliance-account" data-toggle="tooltip" title="{{ button_save }}" class="btn btn-primary">
+          <i class="fa fa-save"></i>
+        </button>
+        <a href="{{ back }}" data-toggle="tooltip" title="{{ button_back }}" class="btn btn-default">
+          <i class="fa fa-reply"></i>
+        </a>
+      </div>
+      <h1>{{ heading_title }}</h1>
+      <ul class="breadcrumb">
+        {% for breadcrumb in breadcrumbs %}
+          <li>
+            <a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="container-fluid" id="alliance-page">
+    {% if error_warning %}
+      <div class="alert alert-danger alert-dismissible" role="alert">
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+        <i class="fa fa-exclamation-circle"></i> {{ error_warning }}
+      </div>
+    {% endif %}
+    {% if success %}
+      <div class="alert alert-success alert-dismissible" role="alert">
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+        <i class="fa fa-check-circle"></i> {{ success }}
+      </div>
+    {% endif %}
+
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-pencil"></i> {{ text_alliance_settings }}</h3>
+      </div>
+      <div class="panel-body">
+        <form id="form-alliance-account" class="form-horizontal" action="{{ url_action }}" method="post" enctype="multipart/form-data">
+          <input type="hidden" name="action" value="save" />
+          <div class="form-group">
+            <div class="col-sm-10">
+              <h4>{{ text_help_settings }}</h4>
+            </div>
+          </div>
+          <div class="form-group">
+            <div class="col-sm-10">
+              <h5>{{ text_help_jwt }}</h5>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="col-sm-2 control-label" for="payment_alliance_url">{{ entry_api_url }}</label>
+            <div class="col-sm-10">
+              <div class="input-group">
+                <span class="input-group-addon"><i class="fa fa-link fa-fw"></i></span>
+                <input type="text" name="payment_alliance_url" id="payment_alliance_url" value="{{ payment_alliance_url }}" placeholder="" class="form-control" />
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="col-sm-2 control-label" for="payment_alliance_jwt_param_x">{{ entry_param_x }}</label>
+            <div class="col-sm-10">
+              <div class="input-group">
+                <span class="input-group-addon"><i class="fa fa-key fa-fw"></i></span>
+                <input type="text" name="payment_alliance_jwt_param_x" id="payment_alliance_jwt_param_x" value="{{ payment_alliance_jwt_param_x }}" placeholder="" class="form-control" />
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="col-sm-2 control-label" for="payment_alliance_jwt_param_y">{{ entry_param_y }}</label>
+            <div class="col-sm-10">
+              <div class="input-group">
+                <span class="input-group-addon"><i class="fa fa-key fa-fw"></i></span>
+                <input type="text" name="payment_alliance_jwt_param_y" id="payment_alliance_jwt_param_y" value="{{ payment_alliance_jwt_param_y }}" placeholder="" class="form-control" />
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="col-sm-2 control-label" for="payment_alliance_jwt_param_d">{{ entry_param_d }}</label>
+            <div class="col-sm-10">
+              <div class="input-group">
+                <span class="input-group-addon"><i class="fa fa-key fa-fw"></i></span>
+                <input type="text" name="payment_alliance_jwt_param_d" id="payment_alliance_jwt_param_d" value="{{ payment_alliance_jwt_param_d }}" placeholder="" class="form-control" />
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="col-sm-2 control-label" for="payment_alliance_service_code_id">{{ alliance_service_code_id_api_key }}</label>
+            <div class="col-sm-10">
+              <div class="input-group">
+                <span class="input-group-addon"><i class="fa fa-code fa-fw"></i></span>
+                <input type="text" name="payment_alliance_service_code_id" id="payment_alliance_service_code_id" value="{{ payment_alliance_service_code_id }}" placeholder="" class="form-control" />
+              </div>
+              <p class="help-block">{{ help_service_code }}</p>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="col-sm-2 control-label" for="payment_alliance_merchant_id">{{ merchant_id_key }}</label>
+            <div class="col-sm-10">
+              <div class="input-group">
+                <span class="input-group-addon"><i class="fa fa-user fa-fw"></i></span>
+                <input type="text" name="payment_alliance_merchant_id" id="payment_alliance_merchant_id" value="{{ payment_alliance_merchant_id }}" placeholder="" class="form-control" />
+              </div>
+              <p class="help-block">{{ help_merchant_id }}</p>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="col-sm-2 control-label" for="payment_alliance_fail_url">{{ entry_fail_url }}</label>
+            <div class="col-sm-10">
+              <div class="input-group">
+                <span class="input-group-addon"><i class="fa fa-link fa-fw"></i></span>
+                <input type="text" name="payment_alliance_fail_url" id="payment_alliance_fail_url" value="{{ payment_alliance_fail_url }}" placeholder="" class="form-control" />
+              </div>
+              <p class="help-block">{{ help_fail_url }}</p>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="col-sm-2 control-label" for="payment_alliance_success_url">{{ entry_success_url }}</label>
+            <div class="col-sm-10">
+              <div class="input-group">
+                <span class="input-group-addon"><i class="fa fa-link fa-fw"></i></span>
+                <input type="text" name="payment_alliance_success_url" id="payment_alliance_success_url" value="{{ payment_alliance_success_url }}" placeholder="" class="form-control" />
+              </div>
+              <p class="help-block">{{ help_success_url }}</p>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="col-sm-2 control-label" for="input-status">{{ entry_status }}</label>
+            <div class="col-sm-10">
+              <select name="payment_alliance_status" id="input-status" class="form-control">
+                {% if payment_alliance_status %}
+                  <option value="1" selected="selected">{{ text_enabled }}</option>
+                  <option value="0">{{ text_disabled }}</option>
+                {% else %}
+                  <option value="1">{{ text_enabled }}</option>
+                  <option value="0" selected="selected">{{ text_disabled }}</option>
+                {% endif %}
+              </select>
+              <p class="help-block">{{ help_status }}</p>
+            </div>
+          </div>
+
+          <hr />
+
+          <div class="form-group">
+            <div class="col-sm-10">
+              <h3>{{ text_statuses }}</h3>
+              <p class="help-block">{{ help_statuses }}</p>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="col-sm-2 control-label">{{ entry_pending_status }}</label>
+            <div class="col-sm-10">
+              <select name="payment_alliance_pending_status" class="form-control">
+                {% for order_status in order_statuses %}
+                  {% if order_status.order_status_id == payment_alliance_pending_status %}
+                    <option value="{{ order_status.order_status_id }}" selected="selected">{{ order_status.name }}</option>
+                  {% else %}
+                    <option value="{{ order_status.order_status_id }}">{{ order_status.name }}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+              <p class="help-block">{{ help_pending_status }}</p>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="col-sm-2 control-label">{{ entry_error_status }}</label>
+            <div class="col-sm-10">
+              <select name="payment_alliance_error_status" class="form-control">
+                {% for order_status in order_statuses %}
+                  {% if order_status.order_status_id == payment_alliance_error_status %}
+                    <option value="{{ order_status.order_status_id }}" selected="selected">{{ order_status.name }}</option>
+                  {% else %}
+                    <option value="{{ order_status.order_status_id }}">{{ order_status.name }}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+              <p class="help-block">{{ help_error_status }}</p>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="col-sm-2 control-label">{{ entry_paid_status }}</label>
+            <div class="col-sm-10">
+              <select name="payment_alliance_paid_status" class="form-control">
+                {% for order_status in order_statuses %}
+                  {% if order_status.order_status_id == payment_alliance_paid_status %}
+                    <option value="{{ order_status.order_status_id }}" selected="selected">{{ order_status.name }}</option>
+                  {% else %}
+                    <option value="{{ order_status.order_status_id }}">{{ order_status.name }}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+              <p class="help-block">{{ help_paid_status }}</p>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="col-sm-2 control-label">{{ entry_refunded_status }}</label>
+            <div class="col-sm-10">
+              <select name="payment_alliance_refunded_status" class="form-control">
+                {% for order_status in order_statuses %}
+                  {% if order_status.order_status_id == payment_alliance_refunded_status %}
+                    <option value="{{ order_status.order_status_id }}" selected="selected">{{ order_status.name }}</option>
+                  {% else %}
+                    <option value="{{ order_status.order_status_id }}">{{ order_status.name }}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+              <p class="help-block">{{ help_refunded_status }}</p>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="col-sm-2 control-label">{{ entry_refund_fail_status }}</label>
+            <div class="col-sm-10">
+              <select name="payment_alliance_refund_fail_status" class="form-control">
+                {% for order_status in order_statuses %}
+                  {% if order_status.order_status_id == payment_alliance_refund_fail_status %}
+                    <option value="{{ order_status.order_status_id }}" selected="selected">{{ order_status.name }}</option>
+                  {% else %}
+                    <option value="{{ order_status.order_status_id }}">{{ order_status.name }}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+              <p class="help-block">{{ help_refund_fail_status }}</p>
+            </div>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<style>
+  .admin-statuses {
+    padding-bottom: 20px;
+  }
+</style>
+{{ footer }}

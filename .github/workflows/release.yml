@@ -1,0 +1,53 @@
+name: Create OpenCart Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: composer install --no-dev --optimize-autoloader --ignore-platform-reqs
+
+      - name: Prepare Extension Structure
+        run: |
+          mkdir -p build/upload/admin
+          mkdir -p build/upload/catalog
+          mkdir -p build/upload/system/library/alliancepay/vendor
+          
+          [ -d admin ] && cp -rv admin/* build/upload/admin/
+          [ -d catalog ] && cp -rv catalog/* build/upload/catalog/
+          
+          if [ -d system ]; then
+            cp -rv system/* build/upload/system/
+          fi
+          
+          cp -rv vendor/* build/upload/system/library/alliancepay/vendor/
+          
+          if [ -f install.xml ]; then
+            cp -v install.xml build/install.xml
+          else
+            echo "Warning: install.xml not found!"
+          fi
+
+      - name: Create OCMOD Archive
+        run: |
+          cd build
+          zip -r ../alliance-${{ github.ref_name }}.ocmod.zip .
+          cd ..
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: alliance-${{ github.ref_name }}.ocmod.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

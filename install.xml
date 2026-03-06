@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<modification>
+    <name>AlliancePayment</name>
+    <code>alliance</code>
+    <version>1.2.0</version>
+    <author>Alliance Dgtl</author>
+    <link>https://docs.merchant.alb.ua/</link>
+    <file path="admin/controller/sale/order.php">
+        <operation>
+            <search><![CDATA[$data['shipping'] = $this->url->link('sale/order/shipping', 'user_token=' . $this->session->data['user_token'] . '&order_id=' . (int)$this->request->get['order_id'], true);]]></search>
+            <add position="after"><![CDATA[
+            // Завантаження мовних змінних для OCMod
+            $this->load->language('extension/payment/alliance');
+            $data['text_select_for_return'] = $this->language->get('text_select_for_return');
+            $data['text_already_returned'] = $this->language->get('text_already_returned');
+            $data['text_order_fully_refunded'] = $this->language->get('text_order_fully_refunded');
+            $data['text_refund_shipping_cost'] = $this->language->get('text_refund_shipping_cost');
+            $data['text_please_select_products'] = $this->language->get('text_please_select_products');
+            $data['text_confirm_return_requests'] = $this->language->get('text_confirm_return_requests');
+            $shipping_match = $this->language->get('text_shipping_match') ? $this->language->get('text_shipping_match') : 'shipping';
+
+            // Додаємо дані про повернення без зміни core-файлу
+            $data['returned_products'] = [];
+            $returned_query = $this->db->query("SELECT product_id FROM " . DB_PREFIX . "return WHERE order_id = '" . (int)$this->request->get['order_id'] . "'");
+            if ($returned_query->num_rows) {
+                foreach ($returned_query->rows as $row) {
+                    $data['returned_products'][] = $row['product_id'];
+                }
+            }
+
+            $res_shipping = $this->db->query("SELECT return_id FROM " . DB_PREFIX . "return WHERE order_id = '" . (int)$this->request->get['order_id'] . "' AND comment LIKE '%" . $this->db->escape($shipping_match) . "%'");
+            $data['shipping_returned'] = $res_shipping->num_rows;
+        ]]></add>
+        </operation>
+    </file>
+    <file path="admin/view/template/sale/order_info.twig">
+        <operation>
+            <search><![CDATA[<td class="text-left">{{ column_product }}</td>]]></search>
+            <add position="before"><![CDATA[
+                <td class="text-center" style="width: 1px;">
+                    <i class="fa fa-undo" title="{{ text_select_for_return }}"></i>
+                </td>
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[<td class="text-left"><a href="{{ product.href }}">{{ product.name }}</a>]]></search>
+            <add position="before"><![CDATA[
+                <td class="text-center">
+                    {% if returned_products is defined and product.order_product_id in returned_products %}
+                        <i class="fa fa-undo text-danger" title="{{ text_already_returned }}"></i>
+                    {% else %}
+                        <input type="checkbox" name="selected_return[]" value="{{ product.order_product_id }}" class="return-checkbox" />
+                    {% endif %}
+                </td>
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[{% for total in totals %}]]></search>
+            <add position="before"><![CDATA[
+                <tr>
+                  <td class="text-left" colspan="4">
+                    <div class="checkbox" style="margin: 0; padding: 5px;">
+                        {% if is_alliance_refunded %}
+                            <i class="fa fa-undo text-danger" title="{{ text_already_returned }}"></i>
+                            <strong>{{ text_order_fully_refunded }}</strong>
+                        {% else %}
+                            <label>
+                                <input type="checkbox" id="refund-shipping" value="1" />
+                                <strong>{{ text_refund_shipping_cost }}</strong>
+                            </label>
+                        {% endif %}
+                    </div>
+                  </td>
+                </tr>
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[{{ footer }}]]></search>
+            <add position="before"><![CDATA[
+            <script type="text/javascript">
+            function proceedPartialReturn() {
+                var selected = [];
+                var refund_shipping = $('#refund-shipping').is(':checked') ? 1 : 0;
+                $('.return-checkbox:checked').each(function() {
+                    selected.push($(this).val());
+                });
+
+                if (selected.length == 0) {
+                    alert('{{ text_please_select_products }}');
+                    return;
+                }
+
+                if (confirm('{{ text_confirm_return_requests }}')) {
+                    $.ajax({
+                        url: 'index.php?route=extension/payment/refund/refund&user_token={{ user_token }}&order_id={{ order_id }}',
+                        type: 'post',
+                        data: { product_ids: selected, is_full_refund: false, refund_shipping: refund_shipping },
+                        dataType: 'json',
+                        success: function(json) {
+                            if (json['success']) { alert(json['message']); location.reload(); }
+                            if (json['error']) { alert(json['message']); }
+                        }
+                    });
+                }
+            }
+            </script>
+            ]]></add>
+        </operation>
+    </file>
+</modification>

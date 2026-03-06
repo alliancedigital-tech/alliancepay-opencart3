@@ -1,0 +1,193 @@
+{{ header }}{{ column_left }}
+<div id="content">
+    <div class="page-header">
+        <div class="container-fluid">
+            <div class="pull-right">
+                <a href="{{ back }}" data-toggle="tooltip" title="{{ button_back }}" class="btn btn-default">
+                    <i class="fa fa-reply"></i>
+                </a>
+            </div>
+            <h1>{{ heading_title }}</h1>
+            <ul class="breadcrumb">
+                {% for breadcrumb in breadcrumbs %}
+                    <li>
+                        <a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <div class="container-fluid" id="alliance-page">
+        {% if error_warning %}
+            <div class="alert alert-danger alert-dismissible" role="alert">
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <i class="fa fa-exclamation-circle"></i> {{ error_warning }}
+            </div>
+        {% endif %}
+
+        {% if success %}
+            <div class="alert alert-success alert-dismissible" role="alert">
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <i class="fa fa-check-circle"></i> {{ success }}
+            </div>
+        {% endif %}
+
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h3 class="panel-title"><i class="fa fa-info-circle"></i> {{ text_payment_info }}</h3>
+            </div>
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-sm-12">
+                        {% if (is_error) %}
+                            <div class="form-group">
+                                <label class="control-label">{{ text_message_type }}</label>
+                                <p class="form-control-static">
+                                    <span class="alliance-order-info-title">{{ msg_type }}</span>
+                                </p>
+                            </div>
+                        {% else %}
+                            {% if (is_refund) %}
+                                <div class="form-group">
+                                    <label class="control-label">{{ text_refund_status }}</label>
+                                    <p class="form-control-static">
+                                        <span class="alliance-order-info-value-refund">
+                                            <strong>{{ text_refund_successful }}</strong>
+                                        </span>
+                                    </p>
+                                </div>
+                            {% endif %}
+
+                            <div class="form-group">
+                                <label class="control-label">{{ text_order_status }}</label>
+                                <p class="form-control-static">
+                                    <span class="alliance-order-info-value">{{ order_status }}</span>
+                                </p>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="control-label">{{ text_amount }}</label>
+                                <p class="form-control-static">
+                                    <span class="alliance-order-info-value">{{ coin_amount }}</span>
+                                </p>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="control-label">{{ text_ecom_order_id }}</label>
+                                <p class="form-control-static">
+                                    <span class="alliance-order-info-value">{{ ecom_order_id }}</span>
+                                </p>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="control-label">{{ text_status_url }}</label>
+                                <p class="form-control-static">
+                                    <span class="alliance-order-info-value">
+                                        <a href="{{ status_url }}" target="_blank">{{ status_url }}</a>
+                                    </span>
+                                </p>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="control-label">{{ text_merchant_id }}</label>
+                                <p class="form-control-static">
+                                    <span class="alliance-order-info-value">{{ merchant_id }}</span>
+                                </p>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="control-label">{{ text_hpp_order_id }}</label>
+                                <p class="form-control-static">
+                                    <span class="alliance-order-info-value">{{ hpp_order_id }}</span>
+                                </p>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="control-label">{{ text_hpp_pay_type }}</label>
+                                <p class="form-control-static">
+                                    <span class="alliance-order-info-value">{{ hpp_pay_type }}</span>
+                                </p>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="control-label">{{ text_expired_order_date }}</label>
+                                <p class="form-control-static">
+                                    <span class="alliance-order-info-value">{{ expired_order_date }}</span>
+                                </p>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="control-label">{{ text_created_date }}</label>
+                                <p class="form-control-static">
+                                    <span class="alliance-order-info-value">{{ create_date }}</span>
+                                </p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .alliance-order-info-title {
+        font-family: 'Arial', sans-serif;
+        font-size: 14px;
+        color: #333;
+        line-height: 1.6;
+        letter-spacing: 0.5px;
+        text-align: justify;
+        text-transform: capitalize;
+        display: inline-block;
+    }
+
+    .alliance-order-info-value {
+        font-family: 'Arial', sans-serif;
+        font-size: 13px;
+        color: #666;
+        line-height: 1.6;
+        letter-spacing: 0.5px;
+        text-align: justify;
+        text-transform: capitalize;
+        display: inline-block;
+    }
+
+    .alliance-order-info-value-refund {
+        color: #d9534f;
+        font-weight: bold;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .form-group:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+
+    .form-control-static {
+        padding-top: 7px;
+        padding-bottom: 7px;
+        margin-bottom: 0;
+    }
+
+    .form-control-static a {
+        color: #0275d8;
+        text-decoration: underline;
+    }
+
+    .form-control-static a:hover {
+        color: #025aa5;
+    }
+</style>
+
+{{ footer }}
