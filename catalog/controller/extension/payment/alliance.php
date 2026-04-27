@@ -97,7 +97,7 @@ class ControllerExtensionPaymentAlliance extends Controller
             $decrypt_auth = $this->ecom->decryptResponse($jwe_token);
             $data = $this->ecom->createCardHppOrder(
                 $decrypt_auth,
-                $this->session,
+                $order,
                 $this->config,
                 $this->url,
                 $order['total']

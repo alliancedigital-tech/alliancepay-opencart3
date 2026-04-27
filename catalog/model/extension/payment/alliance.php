@@ -115,18 +115,6 @@ class ModelExtensionPaymentAlliance extends Model
     {
         $this->load->model('checkout/order');
 
-        if ($data['orderStatus'] == 'PENDING' || $data['orderStatus'] == 'REQUIRED_3DS'){
-            $this->model_checkout_order->addOrderHistory($order_id, $this->config->get('payment_alliance_pending_status'));
-        }
-
-        if ($data['orderStatus'] == 'FAIL'){
-            $this->model_checkout_order->addOrderHistory($order_id, $this->config->get('payment_alliance_error_status'));
-        }
-
-        if ($data['orderStatus'] == 'SUCCESS'){
-            $this->model_checkout_order->addOrderHistory($order_id, $this->config->get('payment_alliance_paid_status'));
-        }
-
         $data = $this->prepareOperations($data);
 
         $sql = "UPDATE `" . DB_PREFIX . "alliance_checkout_integration_order` SET";
