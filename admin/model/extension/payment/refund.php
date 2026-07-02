@@ -1,7 +1,15 @@
 <?php
+/**
+ * Copyright © 2026 Alliance Dgtl. https://alb.ua/uk
+ */
+
+declare(strict_types=1);
 
 use GuzzleHttp\Exception\GuzzleException;
 
+/**
+ * Class ModelExtensionPaymentRefund.
+ */
 class ModelExtensionPaymentRefund extends Model
 {
     public function __construct(Registry $registry)
@@ -23,8 +31,9 @@ class ModelExtensionPaymentRefund extends Model
      * @param int $orderId
      * @param $isFullReturn
      * @param $productIds
+     * @param $refundShipping
      * @return array|mixed
-     * @throws GuzzleException
+     * @throws Throwable
      */
     public function refundOrder(int $orderId, $isFullReturn = true, $productIds = [], $refundShipping = 0)
     {
@@ -37,7 +46,6 @@ class ModelExtensionPaymentRefund extends Model
             $purchaseOperation = [];
 
             try {
-
                 if (empty($allianceOrderCallBack)) {
                     $jwe_token = $this->ecom->authorizeByVirtualDevice(
                         $this->config->get('payment_alliance_service_code_id')
@@ -51,6 +59,14 @@ class ModelExtensionPaymentRefund extends Model
                 } else {
                     $purchaseOperation = $this->getOperationPurchaseData($allianceOrderCallBack);
                 }
+
+                if (empty($purchaseOperation)) {
+                    return [
+                        'message' => $this->language->get('text_alliance_operation_purchase_not_found'),
+                        'error' => true,
+                    ];
+                }
+
                 $coinAmount = $isFullReturn
                     ? $purchaseOperation['coinAmount']
                     : $this->getPartialRefundCoinAmount($orderId, $productIds, $refundShipping);
@@ -61,7 +77,6 @@ class ModelExtensionPaymentRefund extends Model
                         'payment_alliance_service_code_id'
                     )
                 );
-                $data = [];
                 $decrypt_auth = $this->ecom->decryptResponse($jwe_token);
                 $data = $this->ecom->proceedRefund(
                     $decrypt_auth,
@@ -71,8 +86,8 @@ class ModelExtensionPaymentRefund extends Model
 
                 if (!empty($data['msgType']) && $data['msgType'] == 'ERROR') {
                     $this->logger->log(
-                        'Refound error: ' . $data['msgText'] ?? '',
-                        LogLevel::ERROR
+                        AllianceLogger::ERROR,
+                        'Refund error: ' . ($data['msgText'] ?? '')
                     );
                 }
 
@@ -98,19 +113,22 @@ class ModelExtensionPaymentRefund extends Model
                     $e->getMessage()
                 );
             }
+
+            if (empty($data['error'])) {
+                $data['message'] = $this->language->get('text_refund_success_message');
+                $data['success'] = true;
+            }
         } else {
             $data['message'] = $this->language->get('error_something_went_wrong');
             $data['error'] = true;
         }
 
-        $data['message'] = $this->language->get('text_refund_success_message');
-        $data['success'] = true;
-
         return $data;
     }
 
     /**
-     * @param array $operationStatusData
+     * @param array $operationData
+     * @param int $coinAmount
      * @return array
      */
     public function prepareRefundData(array $operationData, int $coinAmount = 0)
@@ -125,6 +143,10 @@ class ModelExtensionPaymentRefund extends Model
         return $data;
     }
 
+    /**
+     * @param int $orderId
+     * @return bool
+     */
     public function checkIfOrderRefunded(int $orderId): bool
     {
         $refoundAmont = 0;
@@ -136,9 +158,9 @@ class ModelExtensionPaymentRefund extends Model
         }
 
         $ocOrder = $this->model_sale_order->getOrder($orderId);
-        $ocOrderTotal = $this->getCoinAmount($ocOrder['total']);
+        $ocOrderTotal = self::toCoinAmount((float)$ocOrder['total']);
 
-        return $ocOrderTotal == $refoundAmont;
+        return $ocOrderTotal === $refoundAmont;
     }
 
     /**
@@ -148,12 +170,16 @@ class ModelExtensionPaymentRefund extends Model
     private function getOperationPurchaseData(array $orderCallBackData): array
     {
         $purchaseOperation = [];
+        $operationTypes = [
+            'PURCHASE',
+            'ACCOUNT_2_ACCOUNT'
+        ];
 
         if (!empty($orderCallBackData['operation'])) {
             $purchaseOperation = $orderCallBackData['operation'];
-        } elseif ($orderCallBackData['operations']) {
+        } elseif (!empty($orderCallBackData['operations'])) {
             foreach ($orderCallBackData['operations'] as $operation) {
-                if (!empty($operation['type']) && $operation['type'] == 'PURCHASE') {
+                if (!empty($operation['type']) && in_array($operation['type'], $operationTypes)) {
                     $purchaseOperation = $operation;
                 }
             }
@@ -162,6 +188,12 @@ class ModelExtensionPaymentRefund extends Model
         return $purchaseOperation;
     }
 
+    /**
+     * @param $orderId
+     * @param $productIds
+     * @param $refundShipping
+     * @return int
+     */
     private function getPartialRefundCoinAmount($orderId, $productIds, $refundShipping = 0)
     {
         $coinAmount = 0;
@@ -185,6 +217,12 @@ class ModelExtensionPaymentRefund extends Model
         return $coinAmount;
     }
 
+    /**
+     * @param $orderId
+     * @param $isFullReturn
+     * @param $productIds
+     * @return void
+     */
     private function proceedReturn($orderId ,$isFullReturn = true, $productIds = []): void
     {
         $this->load->model('localisation/return_reason');
@@ -226,11 +264,21 @@ class ModelExtensionPaymentRefund extends Model
         }
     }
 
-    private function getCoinAmount($itemAmount)
+    /**
+     * @param float $itemAmount
+     * @return int
+     */
+    public static function toCoinAmount(float $itemAmount): int
     {
         $amount = number_format($itemAmount, 4, '.', '');
         $amount = str_replace([' ', ','], ['', '.'], $amount);
 
         return (int)round((float)$amount * 100);
+    }
+
+    /** @deprecated Use toCoinAmount() instead */
+    private function getCoinAmount($itemAmount): int
+    {
+        return self::toCoinAmount((float)$itemAmount);
     }
 }

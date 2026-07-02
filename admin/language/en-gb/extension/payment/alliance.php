@@ -77,70 +77,74 @@ $_["error_return_url"] = "`Return URL` needs to be a valid URL";
 $_["log_error_install"] = "Alliance payment extension was not installed correctly or the files are corrupt. Please reinstall the extension. If this message persists after a reinstall, contact support with this message.";
 
 // General Text
-$_['text_alliance_settings']    = 'Alliance payment module settings';
-$_['text_help_settings']        = 'Be sure to fill in all settings and check if everything is correct. Otherwise, the payment may not work correctly.';
-$_['text_help_jwt']             = 'Enter jwt keys. You need to select parameters "x", "y", "d" from the generated key file to decrypt the responses. If the keys are not filled or incorrect, the plugin will not work. If you have any questions, contact JSC "BANK ALLIANCE".';
-$_['text_payment_info']         = 'Payment Information';
-$_['text_message_type']         = 'Message Type:';
-$_['text_refund_status']        = 'Refund Status:';
-$_['text_refund_successful']    = 'refund successful';
-$_['text_order_status']         = 'Order Status:';
-$_['text_amount']               = 'Amount:';
-$_['text_ecom_order_id']        = 'Ecom Order ID:';
-$_['text_status_url']           = 'Status URL:';
-$_['text_merchant_id']          = 'Merchant ID:';
-$_['text_hpp_order_id']         = 'HPP Order ID:';
-$_['text_hpp_pay_type']         = 'HPP Pay Type:';
-$_['text_expired_order_date']   = 'Expired Order Date:';
-$_['text_created_date']         = 'Created Date:';
+$_['text_alliance_settings'] = 'Alliance payment module settings';
+$_['text_help_settings'] = 'Be sure to fill in all settings and check if everything is correct. Otherwise, the payment may not work correctly.';
+$_['text_help_jwt'] = 'Enter jwt keys. You need to select parameters "x", "y", "d" from the generated key file to decrypt the responses. If the keys are not filled or incorrect, the plugin will not work. If you have any questions, contact JSC "BANK ALLIANCE".';
+$_['text_payment_info'] = 'Payment Information';
+$_['text_message_type'] = 'Message Type:';
+$_['text_refund_status'] = 'Refund Status:';
+$_['text_refund_successful'] = 'refund successful';
+$_['text_order_status'] = 'Order Status:';
+$_['text_amount'] = 'Amount:';
+$_['text_ecom_order_id'] = 'Ecom Order ID:';
+$_['text_status_url'] = 'Status URL:';
+$_['text_merchant_id'] = 'Merchant ID:';
+$_['text_hpp_order_id'] = 'HPP Order ID:';
+$_['text_hpp_pay_type'] = 'HPP Pay Type:';
+$_['text_expired_order_date'] = 'Expired Order Date:';
+$_['text_created_date'] = 'Created Date:';
 
 // Entries
-$_['entry_api_url']             = 'Alliance API URL';
-$_['entry_param_x']             = 'Parameter "x"';
-$_['entry_param_y']             = 'Parameter "y"';
-$_['entry_param_d']             = 'Parameter "d"';
-$_['entry_fail_url']            = 'Page to redirect the user in case of payment error';
-$_['entry_success_url']         = 'Page to redirect the user in case of successful payment';
-$_['entry_status']              = 'Payment module status';
-$_['entry_pending_status']      = '"Payment in progress" status';
-$_['entry_error_status']        = '"Payment error" status';
-$_['entry_paid_status']         = '"Paid" status';
-$_['entry_refunded_status']     = '"Payment refunded" status';
-$_['entry_refund_fail_status']  = '"Refund error" status';
+$_['entry_api_url'] = 'Alliance API URL';
+$_['entry_param_x'] = 'Parameter "x"';
+$_['entry_param_y'] = 'Parameter "y"';
+$_['entry_param_d'] = 'Parameter "d"';
+$_['entry_hpp_type'] = 'Hpp Type';
+$_['entry_fail_url'] = 'Page to redirect the user in case of payment error';
+$_['entry_success_url'] = 'Page to redirect the user in case of successful payment';
+$_['entry_status'] = 'Payment module status';
+$_['entry_pending_status'] = '"Payment in progress" status';
+$_['entry_error_status'] = '"Payment error" status';
+$_['entry_paid_status'] = '"Paid" status';
+$_['entry_refunded_status'] = '"Payment refunded" status';
+$_['entry_refund_fail_status'] = '"Refund error" status';
 
 // Helps
-$_['help_service_code']         = 'Get serviceCode from JSC "BANK ALLIANCE"';
-$_['help_merchant_id']          = 'Get merchantId from JSC "BANK ALLIANCE"';
-$_['help_fail_url']             = 'This page is standard according to your store settings, if there is a page you want to redirect the buyer to, please specify it. You must write the full path. Example - https://example.com/fail';
-$_['help_success_url']          = 'This page is standard according to your store settings, if there is a page you want to redirect the buyer to, please specify it. You must write the full path. Example - https://example.com/success';
-$_['help_status']               = 'Select \'Enabled\' to activate the module';
-$_['help_statuses']             = 'Statuses must be configured correctly, as they will be used during the payment process.';
-$_['help_pending_status']       = 'Select the status that corresponds to this status in your store. Example status - "Pending"';
-$_['help_error_status']         = 'Select the status that corresponds to this status in your store. Example status - "Failed"';
-$_['help_paid_status']          = 'Select the status that corresponds to this status in your store. Example status - "Complete"';
-$_['help_refunded_status']      = 'Select the status that corresponds to this status in your store. Example status - "Refunded"';
-$_['help_refund_fail_status']   = 'Select the status that corresponds to this status in your store. Example status - "Failed"';
+$_['help_service_code'] = 'Get serviceCode from JSC "BANK ALLIANCE"';
+$_['help_merchant_id'] = 'Get merchantId from JSC "BANK ALLIANCE"';
+$_['help_fail_url'] = 'This page is standard according to your store settings, if there is a page you want to redirect the buyer to, please specify it. You must write the full path. Example - https://example.com/fail';
+$_['help_success_url'] = 'This page is standard according to your store settings, if there is a page you want to redirect the buyer to, please specify it. You must write the full path. Example - https://example.com/success';
+$_['help_status'] = 'Select \'Enabled\' to activate the module';
+$_['help_statuses'] = 'Statuses must be configured correctly, as they will be used during the payment process.';
+$_['help_pending_status'] = 'Select the status that corresponds to this status in your store. Example status - "Pending"';
+$_['help_error_status'] = 'Select the status that corresponds to this status in your store. Example status - "Failed"';
+$_['help_paid_status'] = 'Select the status that corresponds to this status in your store. Example status - "Complete"';
+$_['help_refunded_status'] = 'Select the status that corresponds to this status in your store. Example status - "Refunded"';
+$_['help_refund_fail_status'] = 'Select the status that corresponds to this status in your store. Example status - "Failed"';
+$_['help_hpp_type'] = 'Choose the HPP payment type from the two available PURCHASE or A2A.';
 
-$_['text_statuses']                 = 'Order Statuses';
-$_['text_refund_history_comment']   = 'Refund through Alliance Payment';
-$_['text_refund_success_message']   = 'Refund successful';
-$_['text_auto_return_comment']      = 'Automatic return via AlliancePay system';
-$_['error_something_went_wrong']    = 'Something went wrong :(';
+$_['text_statuses'] = 'Order Statuses';
+$_['text_refund_history_comment'] = 'Refund through Alliance Payment';
+$_['text_refund_success_message'] = 'Refund successful';
+$_['text_auto_return_comment'] = 'Automatic return via AlliancePay system';
+$_['error_something_went_wrong'] = 'Something went wrong :(';
 
 $_['text_partial_refund_title'] = 'Create refund for selected products';
-$_['button_partial_refund']     = '<i class="fa fa-reply"></i> Partial refund';
-$_['button_full_refund']        = '<i class="fa fa-undo"></i> Full refund';
-$_['text_refund_complete_js']   = 'Refund complete!';
-$_['text_refund_failed_js']     = 'Refund failed!';
-$_['button_check_status']       = '<i class="fa fa-info"></i> Check order status';
-$_['heading_title_order_data']  = 'Order data retrieval';
-$_['text_technical_error']      = 'Technical error occurred';
-$_['text_shipping_match']       = 'shipping'; // Слово для пошуку в базі
+$_['button_partial_refund'] = '<i class="fa fa-reply"></i> Partial refund';
+$_['button_full_refund'] = '<i class="fa fa-undo"></i> Full refund';
+$_['text_refund_complete_js'] = 'Refund complete!';
+$_['text_refund_failed_js'] = 'Refund failed!';
+$_['button_check_status'] = '<i class="fa fa-info"></i> Check order status';
+$_['heading_title_order_data'] = 'Order data retrieval';
+$_['text_technical_error'] = 'Technical error occurred';
+$_['text_shipping_match'] = 'shipping'; // Слово для пошуку в базі
 
-$_['text_select_for_return']         = 'Select for return';
-$_['text_already_returned']          = 'Already returned';
-$_['text_order_fully_refunded']      = 'The order amount is fully refunded.';
-$_['text_refund_shipping_cost']      = 'Refund shipping cost?';
-$_['text_please_select_products']    = 'Please select products!';
-$_['text_confirm_return_requests']   = 'Create return requests for selected products?';
+$_['text_select_for_return'] = 'Select for return';
+$_['text_already_returned'] = 'Already returned';
+$_['text_order_fully_refunded'] = 'The order amount is fully refunded.';
+$_['text_refund_shipping_cost'] = 'Refund shipping cost?';
+$_['text_please_select_products'] = 'Please select products!';
+$_['text_confirm_return_requests'] = 'Create return requests for selected products?';
+
+$_['text_alliance_operation_purchase_not_found'] = 'Purchase operation not found.';
 

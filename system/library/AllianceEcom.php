@@ -1,4 +1,9 @@
 <?php
+/**
+ * Copyright © 2026 Alliance Dgtl. https://alb.ua/uk
+ */
+
+declare(strict_types=1);
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
@@ -19,8 +24,13 @@ class AllianceEcom
 
     const NOTIFICATION_URL_ROUTE = 'extension/payment/alliance/notifyCallback';
     const ALGORITHM = 'ECDH-ES+A256KW';
-
     const ENCRYPTION = 'A256GCM';
+
+    const HPP_PAY_TYPE_PURCHASE = 'PURCHASE';
+    const HPP_PAY_TYPE_A2A = 'A2A';
+    const A2A_DIRECT_TYPE = 'BANK_LINK';
+    const A2A_PRIORITY_BANK_CODE = 'ALL_BANKS';
+    const A2A_OPERATION_TYPE = 'ACCOUNT_2_ACCOUNT';
 
     private $dateTime;
     private $client;
@@ -96,6 +106,9 @@ class AllianceEcom
         ],
     ];
 
+    /**
+     * @param Registry $registry
+     */
     public function __construct(Registry $registry)
     {
         $this->config = $registry->get('config');
@@ -105,17 +118,25 @@ class AllianceEcom
         $loader->library('AllianceGuzzleFacade');
         $loader->library('AllianceCountryCodeProvider');
 
-        $composerAutoload = DIR_SYSTEM . 'library/alliancepay/vendor/autoload.php';
+        $autoloadPaths = [
+            DIR_SYSTEM . 'library/alliancepay/vendor/autoload.php',
+            DIR_SYSTEM . '../vendor/autoload.php',
+        ];
 
-        if (file_exists($composerAutoload)) {
-            require_once $composerAutoload;
-        } else {
-            $rootAutoload = DIR_SYSTEM . '../vendor/autoload.php';
-            if (file_exists($rootAutoload)) {
-                require_once $rootAutoload;
-            } else {
-                throw new Exception('AlliancePay: Autoloader not found.');
+        $autoloadLoaded = false;
+        foreach ($autoloadPaths as $autoloadPath) {
+            if (file_exists($autoloadPath)) {
+                require_once $autoloadPath;
+                $autoloadLoaded = true;
+                break;
             }
+        }
+
+        if (!$autoloadLoaded) {
+            throw new \RuntimeException(
+                'AlliancePay: Composer autoloader not found. '
+                . 'Checked paths: ' . implode(', ', $autoloadPaths)
+            );
         }
 
         $this->logger = new AllianceLogger($registry);
@@ -140,19 +161,24 @@ class AllianceEcom
                 ]
             ]);
         } catch (Throwable $e) {
-            $this->logger->log('authorize error: ' . $e->getMessage(), AllianceLogger::ERROR);
+            $this->logger->log(AllianceLogger::ERROR, 'authorize error: ' . $e->getMessage());
+            throw $e;
         }
 
         $contents = $response->getBody()->getContents();
         $contents = json_decode($contents, true);
 
         if (!isset($contents['jwe'])) {
-            $this->logger->log('No token: ' . $e->getMessage(), AllianceLogger::ERROR);
+            $this->logger->log(AllianceLogger::ERROR, 'No token received from authorize endpoint.');
         }
 
         return $contents['jwe'];
     }
 
+    /**
+     * @param string $jwe_token
+     * @return array
+     */
     public function decryptResponse(string $jwe_token)
     {
         $set = new KeySet();
@@ -176,6 +202,12 @@ class AllianceEcom
         return (array) json_decode($jwe_decrypted->getPlaintext());
     }
 
+    /**
+     * @param array $publicServerKey
+     * @param string $payload
+     * @return string
+     * @throws Exception
+     */
     public function encryptRequest(array $publicServerKey, string $payload)
     {
         $headers = [
@@ -191,7 +223,8 @@ class AllianceEcom
         try {
             $token = $jwe->encrypt($keySet);
         } catch (Exception $e) {
-            $this->logger->log('Can not encrypt JWE' . $e->getMessage(), AllianceLogger::ERROR);
+            $this->logger->log(AllianceLogger::ERROR, 'Can not encrypt JWE: ' . $e->getMessage());
+            throw $e;
         }
 
         return $token;
@@ -199,11 +232,12 @@ class AllianceEcom
 
     /**
      * @param array $decrypt_auth
-     * @param object $session
+     * @param array $orderInfo
      * @param object $config
      * @param $url
      * @param $total_price
      * @return mixed
+     * @throws Throwable
      */
     public function createCardHppOrder(array $decrypt_auth, array $orderInfo, object $config, $url, $total_price)
     {
@@ -214,7 +248,8 @@ class AllianceEcom
                 'json' => $this->collectPaymentData($orderInfo, $config, $notificationUrl, $total_price),
             ]);
         } catch (Throwable $e) {
-            $this->logger->log('can\'t create order: ' . $e->getMessage(), AllianceLogger::ERROR);
+            $this->logger->log(AllianceLogger::ERROR, 'Can\'t create order: ' . $e->getMessage());
+            throw $e;
         }
 
         $contents = $response->getBody()->getContents();
@@ -258,8 +293,8 @@ class AllianceEcom
                 }
             }
         } catch (Throwable $e) {
-            $this->logger->log('Can\'t refound: ' . $e->getMessage(), AllianceLogger::ERROR);
-            throw new Exception('Cannot process refund! Check alliance.log for errors.');
+            $this->logger->log(AllianceLogger::ERROR, 'Can\'t proceed refund: ' . $e->getMessage());
+            throw new \RuntimeException('Cannot process refund. Check alliance.log for details.');
         }
 
         return $refundResult;
@@ -280,7 +315,7 @@ class AllianceEcom
                 ]
             ]);
         } catch (Throwable $e) {
-            $this->logger->log('Check operation error: ' . $e->getMessage(), AllianceLogger::ERROR);
+            $this->logger->log(AllianceLogger::ERROR, 'Check operation error: ' . $e->getMessage());
         }
 
         if (isset($response)) {
@@ -326,9 +361,9 @@ class AllianceEcom
             $customerData['senderCustomerId'] = 'not_authorized_' . uniqid();
         }
 
-        return [
+        $paymentData = [
             'merchantId' => $config->get('payment_alliance_merchant_id'),
-            'hppPayType' => 'PURCHASE',
+            'hppPayType' => $config->get('payment_alliance_hpp_type') ?? self::HPP_PAY_TYPE_PURCHASE,
             'failUrl' => $config->get('payment_alliance_fail_url'),
             'successUrl' => $config->get('payment_alliance_success_url'),
             'merchantRequestId' => uniqid(),
@@ -338,8 +373,22 @@ class AllianceEcom
             'coinAmount' => (int)($total_price * 100),
             'notificationUrl' => $url
         ];
+
+        if ($config->get('payment_alliance_hpp_type') === self::HPP_PAY_TYPE_A2A) {
+            $paymentData['hppPaymentType'] = self::HPP_PAY_TYPE_A2A;
+            $paymentData['directType'] = self::A2A_DIRECT_TYPE;
+            $paymentData['priorityBankCode'] = self::A2A_PRIORITY_BANK_CODE;
+            $paymentData['merchantComment'] = 'Payment for order #' . $orderInfo['order_id'];
+        }
+
+        return $paymentData;
     }
 
+    /**
+     * @param string $url
+     * @param array $callBackData
+     * @return array
+     */
     private function collectRefundData(string $url, array $callBackData)
     {
         return [
@@ -352,6 +401,11 @@ class AllianceEcom
         ];
     }
 
+    /**
+     * @param array $decrypt_auth
+     * @param $contentType
+     * @return array
+     */
     private function getHeaders(array $decrypt_auth = [], $contentType = 'application/json')
     {
         $headers['Content-Type'] = $contentType;
@@ -378,6 +432,10 @@ class AllianceEcom
         return $url->link(self::NOTIFICATION_URL_ROUTE);
     }
 
+    /**
+     * @param array $decrypt_auth
+     * @return mixed|null
+     */
     private function getServerPublicKey(array $decrypt_auth = [])
     {
         return $decrypt_auth['serverPublic'] ?? null;

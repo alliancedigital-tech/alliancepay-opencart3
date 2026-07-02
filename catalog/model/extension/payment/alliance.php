@@ -1,4 +1,9 @@
 <?php
+/**
+ * Copyright © 2026 Alliance Dgtl. https://alb.ua/uk
+ */
+
+declare(strict_types=1);
 
 /**
  * Class Alliance.
@@ -6,9 +11,7 @@
 class ModelExtensionPaymentAlliance extends Model
 {
     /**
-     * getMethods
-     *
-     * @param  mixed $address
+     * @param array $address
      * @return array
      */
     public function getMethod(array $address = [])
@@ -29,16 +32,25 @@ class ModelExtensionPaymentAlliance extends Model
         ];
     }
 
-    public function getAllianceOrder($hpp_order_id)
+    /**
+     * @param string $hpp_order_id
+     * @return array
+     */
+    public function getAllianceOrder(string $hpp_order_id): array
     {
         $query = $this->db->query(
             "SELECT * FROM `" . DB_PREFIX . "alliance_checkout_integration_order` WHERE `hpp_order_id` = '"
-            . $hpp_order_id . "'"
+            . $this->db->escape($hpp_order_id) . "'"
         );
 
         return $query->row;
     }
 
+    /**
+     * @param array $data
+     * @param int $order_id
+     * @return void
+     */
     public function saveAllianceOrder(array $data, int $order_id)
     {
         $this->load->model('checkout/order');
@@ -111,6 +123,11 @@ class ModelExtensionPaymentAlliance extends Model
         $this->db->query($sql);
     }
 
+    /**
+     * @param array $data
+     * @param int $order_id
+     * @return void
+     */
     public function saveCallBack(array $data, int $order_id)
     {
         $this->load->model('checkout/order');
@@ -138,6 +155,10 @@ class ModelExtensionPaymentAlliance extends Model
         $this->db->query($sql);
     }
 
+    /**
+     * @param array $data
+     * @return array
+     */
     private function prepareOperations(array $data)
     {
         $operations = [];
@@ -170,6 +191,10 @@ class ModelExtensionPaymentAlliance extends Model
         return $data;
     }
 
+    /**
+     * @param object $session
+     * @return void
+     */
     public function clearCart(object $session)
     {
         $this->cart->clear();
@@ -185,6 +210,9 @@ class ModelExtensionPaymentAlliance extends Model
         unset($session->data['reward']);
     }
 
+    /**
+     * @return mixed
+     */
     public function cartTotalPrice()
     {
         $this->load->model('checkout/cart');

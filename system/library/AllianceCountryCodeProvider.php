@@ -5,6 +5,9 @@
 
 declare(strict_types=1);
 
+/**
+ * Class AllianceCountryCodeProvider.
+ */
 class AllianceCountryCodeProvider
 {
     public function __construct()

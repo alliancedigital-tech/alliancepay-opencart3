@@ -113,6 +113,18 @@
           </div>
 
           <div class="form-group">
+            <label class="col-sm-2 control-label" for="input-status">{{ entry_hpp_type }}</label>
+            <div class="col-sm-10">
+              <select name="payment_alliance_hpp_type" id="input-status" class="form-control">
+                <option value="" {{ payment_alliance_hpp_type is empty ? 'selected="selected"' : '' }}></option>
+                <option value="PURCHASE" {{ payment_alliance_hpp_type == 'PURCHASE' ? 'selected="selected"' : '' }}>PURCHASE</option>
+                <option value="A2A" {{ payment_alliance_hpp_type == 'A2A' ? 'selected="selected"' : '' }}>A2A</option>
+              </select>
+              <p class="help-block">{{ help_hpp_type }}</p>
+            </div>
+          </div>
+
+          <div class="form-group">
             <label class="col-sm-2 control-label" for="payment_alliance_fail_url">{{ entry_fail_url }}</label>
             <div class="col-sm-10">
               <div class="input-group">

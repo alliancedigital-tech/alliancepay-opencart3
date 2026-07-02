@@ -2,7 +2,7 @@
 <modification>
     <name>AlliancePayment</name>
     <code>alliance</code>
-    <version>1.3.0</version>
+    <version>1.4.0</version>
     <author>Alliance Dgtl</author>
     <link>https://docs.merchant.alb.ua/</link>
     <file path="admin/controller/sale/order.php">
@@ -37,14 +37,17 @@
         <operation>
             <search><![CDATA[<td class="text-left">{{ column_product }}</td>]]></search>
             <add position="before"><![CDATA[
-                <td class="text-center" style="width: 1px;">
-                    <i class="fa fa-undo" title="{{ text_select_for_return }}"></i>
-                </td>
+                {% if is_allow_refund %}
+                    <td class="text-center" style="width: 1px;">
+                        <i class="fa fa-undo" title="{{ text_select_for_return }}"></i>
+                    </td>
+                {% endif %}
             ]]></add>
         </operation>
         <operation>
             <search><![CDATA[<td class="text-left"><a href="{{ product.href }}">{{ product.name }}</a>]]></search>
             <add position="before"><![CDATA[
+                {% if is_allow_refund %}
                 <td class="text-center">
                     {% if returned_products is defined and product.order_product_id in returned_products %}
                         <i class="fa fa-undo text-danger" title="{{ text_already_returned }}"></i>
@@ -52,26 +55,29 @@
                         <input type="checkbox" name="selected_return[]" value="{{ product.order_product_id }}" class="return-checkbox" />
                     {% endif %}
                 </td>
+                {% endif %}
             ]]></add>
         </operation>
         <operation>
             <search><![CDATA[{% for total in totals %}]]></search>
             <add position="before"><![CDATA[
-                <tr>
-                  <td class="text-left" colspan="4">
-                    <div class="checkbox" style="margin: 0; padding: 5px;">
-                        {% if is_alliance_refunded %}
-                            <i class="fa fa-undo text-danger" title="{{ text_already_returned }}"></i>
-                            <strong>{{ text_order_fully_refunded }}</strong>
-                        {% else %}
-                            <label>
-                                <input type="checkbox" id="refund-shipping" value="1" />
-                                <strong>{{ text_refund_shipping_cost }}</strong>
-                            </label>
-                        {% endif %}
-                    </div>
-                  </td>
-                </tr>
+                {% if is_allow_refund %}
+                    <tr>
+                      <td class="text-left" colspan="4">
+                        <div class="checkbox" style="margin: 0; padding: 5px;">
+                            {% if is_alliance_refunded %}
+                                <i class="fa fa-undo text-danger" title="{{ text_already_returned }}"></i>
+                                <strong>{{ text_order_fully_refunded }}</strong>
+                            {% else %}
+                                <label>
+                                    <input type="checkbox" id="refund-shipping" value="1" />
+                                    <strong>{{ text_refund_shipping_cost }}</strong>
+                                </label>
+                            {% endif %}
+                        </div>
+                      </td>
+                    </tr>
+                {% endif %}
             ]]></add>
         </operation>
         <operation>

@@ -1,5 +1,13 @@
 <?php
+/**
+ * Copyright © 2026 Alliance Dgtl. https://alb.ua/uk
+ */
 
+declare(strict_types=1);
+
+/**
+ * Class ControllerExtensionPaymentAlliance.
+ */
 class ControllerExtensionPaymentAlliance extends Controller
 {
     public function __construct(Registry $registry)
@@ -15,6 +23,9 @@ class ControllerExtensionPaymentAlliance extends Controller
         $this->ecom = new AllianceEcom($registry);
     }
 
+    /**
+     * @return mixed
+     */
     public function index()
     {
         $data['language'] = $this->config->get('config_language');
@@ -22,6 +33,9 @@ class ControllerExtensionPaymentAlliance extends Controller
         return $this->load->view('extension/payment/alliance', $data);
     }
 
+    /**
+     * @return bool
+     */
     public function notifyCallback(): bool
     {
         $request = file_get_contents('php://input');
@@ -38,37 +52,24 @@ class ControllerExtensionPaymentAlliance extends Controller
             return false;
         }
 
-        if ($request_data['orderStatus'] === 'SUCCESS') {
-            $this->model_checkout_order->addOrderHistory(
-                $alliance_order['order_id'],
-                $this->config->get('payment_alliance_paid_status')
-            );
-            $this->model_account_customer->addTransaction(
-                $order['customer_id'],
-                $alliance_order['order_id'],
-                sprintf($this->language->get('text_transaction_success'), $alliance_order['order_id']),
-                $order['total']
-            );
-        }
+        if (!empty($request_data['hppPayType'])
+            && !empty($request_data['operation'])
+            && $request_data['operation']['type'] !== 'REFUND'
+        ) {
+            $payType = $request_data['hppPayType'];
 
-        if ($request_data['orderStatus'] === 'PENDING' || $request_data['orderStatus'] === 'REQUIRED_3DS') {
-            $this->model_checkout_order->addOrderHistory(
-                $alliance_order['order_id'],
-                $this->config->get('payment_alliance_pending_status')
-            );
-        }
+            if ($payType === 'PURCHASE') {
+                $status = $request_data['orderStatus'] ?? '';
+            } elseif ($payType === 'A2A') {
+                $status = $this->getA2AOperationStatus($request_data);
+                if ($status === '' && isset($request_data['orderStatus'])) {
+                    $status = $request_data['orderStatus'];
+                }
+            } else {
+                $status = '';
+            }
 
-        if ($request_data['orderStatus'] === 'FAIL') {
-            $this->model_checkout_order->addOrderHistory(
-                $alliance_order['order_id'],
-                $this->config->get('payment_alliance_error_status')
-            );
-            $this->model_account_customer->addTransaction(
-                $order['customer_id'],
-                $alliance_order['order_id'],
-                sprintf($this->language->get('text_transaction_fail'), $alliance_order['order_id']),
-                $order['total']
-            );
+            $this->handleOrderStatusChange($status, $alliance_order, $order);
         }
 
         $this->model_extension_payment_alliance->saveCallBack(
@@ -77,18 +78,18 @@ class ControllerExtensionPaymentAlliance extends Controller
         );
 
         return true;
-
     }
 
     /**
-     * @throws GuzzleException
-     * @throws Exception
+     * @return void
+     * @throws Throwable
      */
     public function payment()
     {
         $this->load->model('checkout/order');
 
         $order = $this->model_checkout_order->getOrder($this->session->data['order_id']);
+        $data = [];
 
         try {
             $jwe_token = $this->ecom->authorizeByVirtualDevice(
@@ -115,5 +116,61 @@ class ControllerExtensionPaymentAlliance extends Controller
 
         $this->response->addHeader('Content-Type: application/json');
         $this->response->setOutput(json_encode($json));
+    }
+
+    /**
+     * @param string $status
+     * @param array $allianceOrder
+     * @param array $order
+     * @return void
+     */
+    private function handleOrderStatusChange(string $status, array $allianceOrder, array $order): void
+    {
+        $orderId = $allianceOrder['order_id'];
+
+        if ($status === 'SUCCESS') {
+            $this->model_checkout_order->addOrderHistory(
+                $orderId,
+                $this->config->get('payment_alliance_paid_status')
+            );
+            $this->model_account_customer->addTransaction(
+                $order['customer_id'],
+                $orderId,
+                sprintf($this->language->get('text_transaction_success'), $orderId),
+                $order['total']
+            );
+        } elseif ($status === 'PENDING' || $status === 'REQUIRED_3DS') {
+            $this->model_checkout_order->addOrderHistory(
+                $orderId,
+                $this->config->get('payment_alliance_pending_status')
+            );
+        } elseif ($status === 'FAIL') {
+            $this->model_checkout_order->addOrderHistory(
+                $orderId,
+                $this->config->get('payment_alliance_error_status')
+            );
+            $this->model_account_customer->addTransaction(
+                $order['customer_id'],
+                $orderId,
+                sprintf($this->language->get('text_transaction_fail'), $orderId),
+                $order['total']
+            );
+        }
+    }
+
+    /**
+     * @param array $data
+     * @return string
+     */
+    private function getA2AOperationStatus(array $data): string
+    {
+        if (!empty($data['operation'])
+            && !empty($data['operation']['status'])
+            && $data['operation']['type'] === 'ACCOUNT_2_ACCOUNT'
+        ) {
+            return $data['operation']['status'];
+        }
+
+        return '';
     }
 }

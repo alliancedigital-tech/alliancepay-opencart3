@@ -1,32 +1,43 @@
 <?php
+/**
+ * Copyright © 2026 Alliance Dgtl. https://alb.ua/uk
+ */
 
+declare(strict_types=1);
+
+/**
+ * Class ModelExtensionPaymentDb.
+ */
 class ModelExtensionPaymentDb extends Model
 {
-	public function initDB()
-	{
+    /**
+     * @return void
+     */
+    public function initDB()
+    {
         $this->db->query("CREATE TABLE IF NOT EXISTS `" . DB_PREFIX . "alliance_checkout_integration_order`
-		(
-			`order_id` INT(11) NOT NULL,
-			`merchant_request_id` VARCHAR(255) NOT NULL,
-			`hpp_order_id` VARCHAR(255) NOT NULL,
-			`merchant_id` VARCHAR(255) NOT NULL,
-			`coin_amount` INT(11) NOT NULL,
-			`hpp_pay_type` VARCHAR(50) NOT NULL,
-			`order_status` VARCHAR(50) NOT NULL,
-			`payment_methods` TEXT NOT NULL,
-			`create_date` DATETIME NOT NULL,
-			`updated_at` DATETIME,
+        (
+            `order_id` INT(11) NOT NULL,
+            `merchant_request_id` VARCHAR(255) NOT NULL,
+            `hpp_order_id` VARCHAR(255) NOT NULL,
+            `merchant_id` VARCHAR(255) NOT NULL,
+            `coin_amount` INT(11) NOT NULL,
+            `hpp_pay_type` VARCHAR(50) NOT NULL,
+            `order_status` VARCHAR(50) NOT NULL,
+            `payment_methods` TEXT NOT NULL,
+            `create_date` DATETIME NOT NULL,
+            `updated_at` DATETIME,
             `operation_id` VARCHAR(255),
             `ecom_order_id` VARCHAR(255),
             `is_callback_returned` BOOLEAN DEFAULT FALSE,
             `callback_data` LONGTEXT,
-			`expired_order_date` DATETIME NOT NULL,
-			PRIMARY KEY (`order_id`),
-			KEY `merchant_request_id` (`merchant_request_id`),
-			KEY `hpp_order_id` (`hpp_order_id`),
-			KEY `merchant_id` (`merchant_id`),
-			KEY `order_id` (`order_id`)
-		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;");
+            `expired_order_date` DATETIME NOT NULL,
+            PRIMARY KEY (`order_id`),
+            KEY `merchant_request_id` (`merchant_request_id`),
+            KEY `hpp_order_id` (`hpp_order_id`),
+            KEY `merchant_id` (`merchant_id`),
+            KEY `order_id` (`order_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;");
 
 
         $this->db->query("CREATE TABLE IF NOT EXISTS `" . DB_PREFIX . "alliance_integration_order_refund`
@@ -74,6 +85,9 @@ class ModelExtensionPaymentDb extends Model
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;");
     }
 
+    /**
+     * @return void
+     */
     public function updateAllianceOrderTable()
     {
         $columnsToAdd = "'updated_at', 'ecom_order_id', 'is_callback_returned', 'callback_data'";
@@ -86,20 +100,23 @@ class ModelExtensionPaymentDb extends Model
             'callback_data' => ' LONGTEXT AFTER `payment_methods`',
         ];
 
-        $orderIdIsPrimary = $this->db->query(
+        $orderIdKeyQuery = $this->db->query(
             "SELECT COLUMN_KEY FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = '"
             . DB_DATABASE
             . "' AND TABLE_NAME = '"
             . DB_PREFIX
-            . "alliance_checkout_integration_order' AND COLUMN_NAME='order_id'");
+            . "alliance_checkout_integration_order' AND COLUMN_NAME='order_id'"
+        );
 
-        if ($orderIdIsPrimary == 'PRI') {
+        if (($orderIdKeyQuery->row['COLUMN_KEY'] ?? '') === 'PRI') {
             $this->db->query(
                 "ALTER TABLE `" . DB_PREFIX
-                . "alliance_integration_order_refund` DROP PRIMARY KEY");
+                . "alliance_integration_order_refund` DROP PRIMARY KEY"
+            );
             $this->db->query(
                 "ALTER TABLE `" . DB_PREFIX
-                . "alliance_integration_order_refund` ADD `refund_id` INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY");
+                . "alliance_integration_order_refund` ADD `refund_id` INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY"
+            );
         }
 
         $fields = $this->db->query(

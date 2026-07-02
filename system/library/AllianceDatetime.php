@@ -1,5 +1,13 @@
 <?php
+/**
+ * Copyright © 2026 Alliance Dgtl. https://alb.ua/uk
+ */
 
+declare(strict_types=1);
+
+/**
+ * Class AllianceDatetime.
+ */
 class AllianceDatetime {
     public static function getSiteDateTime($config, $format = 'Y-m-d H:i:s.vP') {
         $timezone = $config->get('config_timezone') ?: 'UTC';

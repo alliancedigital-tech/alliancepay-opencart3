@@ -1,37 +1,46 @@
 <?php
+/**
+ * Copyright © 2026 Alliance Dgtl. https://alb.ua/uk
+ */
+
+declare(strict_types=1);
 
 /**
  * Class ControllerExtensionPaymentAlliance.
  */
 class ControllerExtensionPaymentAlliance extends Controller
 {
-    public $version = '1.1.1';
+    public $version = '1.4.0';
     private $events = [
         [
-            'trigger' => 'admin/view/sale/order_info/after',
-            'action' => 'extension/payment/alliance/operationsEvent',
+            'trigger'    => 'admin/view/sale/order_info/after',
+            'action'     => 'extension/payment/alliance/operationsEvent',
             'event_code' => 'alliance_operations',
             'sort_order' => 1,
         ],
         [
-            'trigger' => 'catalog/model/checkout/order/addOrder/after',
-            'action' => 'extension/payment/event/fix_session_order_id/afterAddOrder',
+            'trigger'    => 'catalog/model/checkout/order/addOrder/after',
+            'action'     => 'extension/payment/event/fix_session_order_id/afterAddOrder',
             'event_code' => 'alliance_fix_session_order_id',
+            'sort_order' => 0,
         ],
         [
-            'trigger' => 'admin/view/sale/order_info/after',
-            'action'=> 'extension/payment/refund/injectRefundButton',
+            'trigger'    => 'admin/view/sale/order_info/after',
+            'action'     => 'extension/payment/refund/injectRefundButton',
             'event_code' => 'alliance_add_refund_button_order_info',
-            'sort_order' => 1,
+            'sort_order' => 2,
         ],
         [
-            'trigger' => 'admin/view/sale/order_info/before',
-            'action'=> 'extension/module/order_refund_helper/addReturnedProducts',
+            'trigger'    => 'admin/view/sale/order_info/before',
+            'action'     => 'extension/module/order_refund_helper/addReturnedProducts',
             'event_code' => 'alliance_order_refund_data',
             'sort_order' => 1,
-        ]
+        ],
     ];
 
+    /**
+     * @return void
+     */
     public function index()
     {
         $this->load->language('extension/payment/alliance');
@@ -84,6 +93,9 @@ class ControllerExtensionPaymentAlliance extends Controller
         $this->response->setOutput($this->load->view('extension/payment/alliance', $data));
     }
 
+    /**
+     * @return void
+     */
     public function install()
     {
         $this->load->language('extension/payment/alliance');
@@ -135,6 +147,9 @@ class ControllerExtensionPaymentAlliance extends Controller
         $this->installEvents();
     }
 
+    /**
+     * @return void
+     */
     public function uninstall()
     {
         $this->load->language('extension/report');
@@ -179,6 +194,9 @@ class ControllerExtensionPaymentAlliance extends Controller
         $this->response->setOutput(json_encode($json));
     }
 
+    /**
+     * @return void
+     */
     public function upgrade() {
         $this->load->model('extension/payment/db');
         $this->model_extension_payment_db->updateAllianceOrderTable();
@@ -186,6 +204,9 @@ class ControllerExtensionPaymentAlliance extends Controller
         $this->model_setting_setting->editSetting('payment_alliance', ['payment_alliance_version' => '1.0.0']);
     }
 
+    /**
+     * @return void
+     */
     private function installEvents()
     {
         $this->load->model('setting/event');
@@ -254,6 +275,10 @@ class ControllerExtensionPaymentAlliance extends Controller
         $output = str_replace('</body>', $buttonHtml . '</body>', $output);
     }
 
+    /**
+     * @return bool
+     * @throws Throwable
+     */
     public function checkOperationStatus()
     {
         $this->load->model('setting/setting');
