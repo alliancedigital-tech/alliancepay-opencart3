@@ -22,6 +22,7 @@ class ModelExtensionPaymentDb extends Model
             `hpp_order_id` VARCHAR(255) NOT NULL,
             `merchant_id` VARCHAR(255) NOT NULL,
             `coin_amount` INT(11) NOT NULL,
+            `original_authorized_amount` INT(11) DEFAULT NULL,
             `hpp_pay_type` VARCHAR(50) NOT NULL,
             `order_status` VARCHAR(50) NOT NULL,
             `payment_methods` TEXT NOT NULL,
@@ -90,7 +91,7 @@ class ModelExtensionPaymentDb extends Model
      */
     public function updateAllianceOrderTable()
     {
-        $columnsToAdd = "'updated_at', 'ecom_order_id', 'is_callback_returned', 'callback_data'";
+        $columnsToAdd = "'updated_at', 'ecom_order_id', 'is_callback_returned', 'callback_data', 'original_authorized_amount'";
 
         $columnsDefinition = [
             'updated_at' => ' DATETIME NOT NULL AFTER `create_date`',
@@ -98,6 +99,7 @@ class ModelExtensionPaymentDb extends Model
             'ecom_order_id' => ' VARCHAR(255) AFTER `payment_methods`',
             'is_callback_returned' => ' BOOLEAN DEFAULT FALSE AFTER `payment_methods`',
             'callback_data' => ' LONGTEXT AFTER `payment_methods`',
+            'original_authorized_amount' => ' INT(11) DEFAULT NULL AFTER `coin_amount`',
         ];
 
         $orderIdKeyQuery = $this->db->query(
@@ -119,18 +121,21 @@ class ModelExtensionPaymentDb extends Model
             );
         }
 
-        $fields = $this->db->query(
-            "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = '"
+        $existingFields = $this->db->query(
+            "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = '"
             . DB_DATABASE
             . "' AND TABLE_NAME = '"
             . DB_PREFIX
             . "alliance_checkout_integration_order' AND COLUMN_NAME IN (" . $columnsToAdd . ")");
 
-        if (!$fields->num_rows) {
-            foreach ($columnsDefinition as $column => $definition) {
+        $existingColumns = array_column($existingFields->rows, 'COLUMN_NAME');
+
+        foreach ($columnsDefinition as $column => $definition) {
+            if (!in_array($column, $existingColumns)) {
                 $this->db->query(
                     "ALTER TABLE `" . DB_PREFIX
-                    . "alliance_checkout_integration_order` ADD `". $column . "`" . $definition);
+                    . "alliance_checkout_integration_order` ADD `" . $column . "`" . $definition
+                );
             }
         }
     }

@@ -10,7 +10,7 @@ declare(strict_types=1);
  */
 class ControllerExtensionPaymentAlliance extends Controller
 {
-    public $version = '1.4.0';
+    public $version = '1.5.0';
     private $events = [
         [
             'trigger'    => 'admin/view/sale/order_info/after',
@@ -246,15 +246,26 @@ class ControllerExtensionPaymentAlliance extends Controller
     {
         $this->load->library('AllianceConfig');
         $this->load->language('extension/payment/alliance');
+        $this->load->model('extension/payment/alliance');
         $buttonHtml = '';
         $order_id = (int)$this->request->get['order_id'];
         $order_info = $this->model_sale_order->getOrder($order_id);
 
         if ($order_info['payment_code'] === AllianceConfig::ALLIANCE_PAYMENT_CODE) {
+            $alliance_order = $this->model_extension_payment_alliance->getAllianceOrder($order_id);
+
             $buttonUrl = 'index.php?route=extension/payment/alliance/checkOperationStatus&user_token='
                 . $this->getUserToken()
                 . '&order_id='
                 . $order_id;
+
+            $completionUrl = 'index.php?route=extension/payment/alliance/executePreAuthCompletion&user_token='
+                . $this->getUserToken()
+                . '&order_id='
+                . $order_id;
+
+            $isPreauth = (!empty($alliance_order) && $alliance_order['hpp_pay_type'] === 'PREAUTH') ? 'true' : 'false';
+
             $buttonHtml = '
             <script>
                 document.addEventListener("DOMContentLoaded", function() {
@@ -263,10 +274,36 @@ class ControllerExtensionPaymentAlliance extends Controller
                         const a = document.createElement("a");
                         a.className = "btn btn-primary";
                         a.style = "margin-right:5px;";
-                        a.href = "'. $buttonUrl . '"
+                        a.href = "' . $buttonUrl . '";
                         a.innerHTML = \'' . $this->language->get('button_check_status') . '\';
-                        
                         container.prepend(a);
+
+                        if (' . $isPreauth . ') {
+                            const btn = document.createElement("button");
+                            btn.type = "button";
+                            btn.className = "btn btn-warning";
+                            btn.style = "margin-right:5px;";
+                            btn.innerHTML = \'' . $this->language->get('button_confirm_payment') . '\';
+                            btn.onclick = function() {
+                                btn.disabled = true;
+                                fetch("' . $completionUrl . '")
+                                    .then(function(r) { 
+                                        return r.json(); 
+                                    })
+                                    .then(function(data) {
+                                        if (data.success) {
+                                            location.reload();
+                                        } else {
+                                            alert(data.message);
+                                            btn.disabled = false;
+                                        }
+                                    })
+                                    .catch(function() {
+                                        btn.disabled = false;
+                                    });
+                            };
+                            container.prepend(btn);
+                        }
                     }
                 });
             </script>';
@@ -364,6 +401,95 @@ class ControllerExtensionPaymentAlliance extends Controller
         );
 
         return true;
+    }
+
+    /**
+     * @return void
+     */
+    public function executePreAuthCompletion()
+    {
+        $this->load->model('extension/payment/alliance');
+        $this->load->model('sale/order');
+        $this->load->language('extension/payment/alliance');
+        $this->load->library('AllianceLogger');
+
+        $json = [];
+        $order_id = (int)($this->request->get['order_id'] ?? 0);
+
+        if (!$order_id) {
+            $json['message'] = $this->language->get('error_something_went_wrong');
+            $json['success'] = false;
+            $this->response->addHeader('Content-Type: application/json');
+            $this->response->setOutput(json_encode($json));
+            return;
+        }
+
+        $alliance_order = $this->model_extension_payment_alliance->getAllianceOrder($order_id);
+
+        if (empty($alliance_order) || ($alliance_order['hpp_pay_type'] ?? '') !== 'PREAUTH') {
+            $json['message'] = $this->language->get('error_not_preauth_order');
+            $json['success'] = false;
+            $this->response->addHeader('Content-Type: application/json');
+            $this->response->setOutput(json_encode($json));
+            return;
+        }
+
+        $order = $this->model_sale_order->getOrder($order_id);
+        $current_coin_amount = (int)($order['total'] * 100);
+        $original_amount = (int)$alliance_order['original_authorized_amount'];
+
+        if ($original_amount > 0) {
+            $lower = (int)($original_amount * 0.80);
+            $upper = (int)($original_amount * 1.20);
+
+            if ($current_coin_amount < $lower || $current_coin_amount > $upper) {
+                $logger = new AllianceLogger($this->registry);
+                $logger->log(
+                    AllianceLogger::ERROR,
+                    sprintf(
+                        'PREAUTH completion rejected for order #%d: current amount %d coins is outside ±20%% of original %d coins',
+                        $order_id,
+                        $current_coin_amount,
+                        $original_amount
+                    )
+                );
+                $json['message'] = $this->language->get('error_completion_amount');
+                $json['success'] = false;
+                $this->response->addHeader('Content-Type: application/json');
+                $this->response->setOutput(json_encode($json));
+                return;
+            }
+        }
+
+        try {
+            $this->load->library('AllianceEcom');
+            $ecom = new AllianceEcom($this->registry);
+            $jwe_token = $ecom->authorizeByVirtualDevice(
+                $this->config->get('payment_alliance_service_code_id')
+            );
+            $decrypt_auth = $ecom->decryptResponse($jwe_token);
+            $alliance_order['coin_amount'] = $current_coin_amount;
+            $completionResult = $ecom->executeCompletion(
+                $decrypt_auth,
+                $alliance_order,
+                $this->url
+            );
+
+            if (!$completionResult) {
+                throw new Exception('Completion failed');
+            }
+
+            $json['message'] = $this->language->get('text_completion_success');
+            $json['success'] = true;
+        } catch (\Throwable $e) {
+            $logger = new AllianceLogger($this->registry);
+            $logger->log(AllianceLogger::ERROR, 'PREAUTH completion error: ' . $e->getMessage());
+            $json['message'] = $this->language->get('error_something_went_wrong');
+            $json['success'] = false;
+        }
+
+        $this->response->addHeader('Content-Type: application/json');
+        $this->response->setOutput(json_encode($json));
     }
 
     /**

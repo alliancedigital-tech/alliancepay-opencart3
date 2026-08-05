@@ -19,7 +19,7 @@ class ModelExtensionPaymentAlliance extends Model
     {
         $allianceOrder = $this->getAllianceOrder($order_id);
 
-        return !empty($allianceOrder) ? json_decode($allianceOrder['callback_data'], true) : [];
+        return !empty($allianceOrder['callback_data']) ? json_decode($allianceOrder['callback_data'], true) : [];
     }
 
     /**
@@ -87,7 +87,8 @@ class ModelExtensionPaymentAlliance extends Model
             return true;
         }
 
-        $decodedCallbackData = json_decode($allianceOrder['callback_data'], true);
+        $decodedCallbackData = !empty($allianceOrder['callback_data'])
+            ? json_decode($allianceOrder['callback_data'], true) : [];
 
         if (!isset($decodedCallbackData['operations']) || !is_array($decodedCallbackData['operations'])) {
             return true;

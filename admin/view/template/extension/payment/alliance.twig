@@ -113,14 +113,33 @@
           </div>
 
           <div class="form-group">
-            <label class="col-sm-2 control-label" for="input-status">{{ entry_hpp_type }}</label>
+            <label class="col-sm-2 control-label" for="input-hpp-type">{{ entry_hpp_type }}</label>
             <div class="col-sm-10">
-              <select name="payment_alliance_hpp_type" id="input-status" class="form-control">
+              <select name="payment_alliance_hpp_type" id="input-hpp-type" class="form-control">
                 <option value="" {{ payment_alliance_hpp_type is empty ? 'selected="selected"' : '' }}></option>
                 <option value="PURCHASE" {{ payment_alliance_hpp_type == 'PURCHASE' ? 'selected="selected"' : '' }}>PURCHASE</option>
                 <option value="A2A" {{ payment_alliance_hpp_type == 'A2A' ? 'selected="selected"' : '' }}>A2A</option>
+                <option value="PREAUTH" {{ payment_alliance_hpp_type == 'PREAUTH' ? 'selected="selected"' : '' }}>PREAUTH</option>
               </select>
               <p class="help-block">{{ help_hpp_type }}</p>
+            </div>
+          </div>
+
+          <div id="preauth-exp-date-group" class="form-group" style="{{ payment_alliance_hpp_type == 'PREAUTH' ? '' : 'display:none;' }}">
+            <label class="col-sm-2 control-label" for="payment_alliance_preauth_exp_date">{{ entry_preauth_exp_date }}</label>
+            <div class="col-sm-10">
+              <select name="payment_alliance_preauth_exp_date" id="payment_alliance_preauth_exp_date" class="form-control">
+                <option value="2h" {{ payment_alliance_preauth_exp_date == '2h' ? 'selected="selected"' : '' }}>2 Hours</option>
+                <option value="4h" {{ payment_alliance_preauth_exp_date == '4h' ? 'selected="selected"' : '' }}>4 Hours</option>
+                <option value="6h" {{ payment_alliance_preauth_exp_date == '6h' ? 'selected="selected"' : '' }}>6 Hours</option>
+                <option value="12h" {{ payment_alliance_preauth_exp_date == '12h' ? 'selected="selected"' : '' }}>12 Hours</option>
+                <option value="1d" {{ payment_alliance_preauth_exp_date == '1d' ? 'selected="selected"' : '' }}>1 Day</option>
+                <option value="2d" {{ payment_alliance_preauth_exp_date == '2d' ? 'selected="selected"' : '' }}>2 Days</option>
+                <option value="7d" {{ payment_alliance_preauth_exp_date == '7d' ? 'selected="selected"' : '' }}>7 Days</option>
+                <option value="14d" {{ payment_alliance_preauth_exp_date == '14d' ? 'selected="selected"' : '' }}>14 Days</option>
+                <option value="28d" {{ payment_alliance_preauth_exp_date == '28d' ? 'selected="selected"' : '' }}>28 Days</option>
+              </select>
+              <p class="help-block">{{ help_preauth_exp_date }}</p>
             </div>
           </div>
 
@@ -251,6 +270,38 @@
             </div>
           </div>
 
+          <div class="form-group">
+            <label class="col-sm-2 control-label">{{ entry_preauth_status }}</label>
+            <div class="col-sm-10">
+              <select name="payment_alliance_preauth_status" class="form-control">
+                {% for order_status in order_statuses %}
+                  {% if order_status.order_status_id == payment_alliance_preauth_status %}
+                    <option value="{{ order_status.order_status_id }}" selected="selected">{{ order_status.name }}</option>
+                  {% else %}
+                    <option value="{{ order_status.order_status_id }}">{{ order_status.name }}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+              <p class="help-block">{{ help_preauth_status }}</p>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="col-sm-2 control-label">{{ entry_completion_status }}</label>
+            <div class="col-sm-10">
+              <select name="payment_alliance_completion_status" class="form-control">
+                {% for order_status in order_statuses %}
+                  {% if order_status.order_status_id == payment_alliance_completion_status %}
+                    <option value="{{ order_status.order_status_id }}" selected="selected">{{ order_status.name }}</option>
+                  {% else %}
+                    <option value="{{ order_status.order_status_id }}">{{ order_status.name }}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+              <p class="help-block">{{ help_completion_status }}</p>
+            </div>
+          </div>
+
         </form>
       </div>
     </div>
@@ -261,4 +312,15 @@
     padding-bottom: 20px;
   }
 </style>
+<script>
+  (function () {
+    var hppSelect = document.getElementById('input-hpp-type');
+    var preauthGroup = document.getElementById('preauth-exp-date-group');
+    function togglePreauth() {
+      preauthGroup.style.display = (hppSelect.value === 'PREAUTH') ? '' : 'none';
+    }
+    hppSelect.addEventListener('change', togglePreauth);
+    togglePreauth();
+  })();
+</script>
 {{ footer }}

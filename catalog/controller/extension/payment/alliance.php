@@ -20,6 +20,8 @@ class ControllerExtensionPaymentAlliance extends Controller
         $this->load->model('account/transaction');
         $this->load->library('AllianceEcom');
         $this->load->library('AllianceLogger');
+        $this->load->library('AllianceHelper');
+        $this->load->library('AllianceConfig');
         $this->ecom = new AllianceEcom($registry);
     }
 
@@ -42,6 +44,10 @@ class ControllerExtensionPaymentAlliance extends Controller
         $request_data = json_decode($request, true);
         $alliance_order = $this->model_extension_payment_alliance->getAllianceOrder($request_data['hppOrderId']);
 
+        if (empty($request_data) || empty($request_data['operation'])) {
+            return false;
+        }
+
         if (empty($alliance_order)) {
             return false;
         }
@@ -52,29 +58,36 @@ class ControllerExtensionPaymentAlliance extends Controller
             return false;
         }
 
+        $operationId = '';
+
         if (!empty($request_data['hppPayType'])
-            && !empty($request_data['operation'])
-            && $request_data['operation']['type'] !== 'REFUND'
+            && $request_data['operation']['type'] !== AllianceConfig::OPERATION_TYPE_REFUND
         ) {
-            $payType = $request_data['hppPayType'];
+            $purchaseOperation = AllianceHelper::getOperationPurchaseData($request_data);
 
-            if ($payType === 'PURCHASE') {
-                $status = $request_data['orderStatus'] ?? '';
-            } elseif ($payType === 'A2A') {
-                $status = $this->getA2AOperationStatus($request_data);
-                if ($status === '' && isset($request_data['orderStatus'])) {
-                    $status = $request_data['orderStatus'];
-                }
+            if (!empty($purchaseOperation)) {
+                $operationId = AllianceHelper::getPurchaseOperationId($purchaseOperation);
+                $purchaseStatus = AllianceHelper::getPurchaseOperationStatus($purchaseOperation);
+
+                $this->handleOrderStatusChange(
+                    $purchaseStatus,
+                    (int) $alliance_order['order_id'],
+                    $order,
+                    $purchaseOperation['type'] === AllianceConfig::OPERATION_TYPE_COMPLETION
+                );
             } else {
-                $status = '';
-            }
+                $preAuthOperation = AllianceHelper::getPreAuthOperationData($request_data);
 
-            $this->handleOrderStatusChange($status, $alliance_order, $order);
+                if (!empty($preAuthOperation)) {
+                    $operationId = $preAuthOperation['operationId'] ?? '';
+                }
+            }
         }
 
         $this->model_extension_payment_alliance->saveCallBack(
             $request_data,
-            $alliance_order['order_id']
+            $alliance_order['order_id'],
+            $operationId
         );
 
         return true;
@@ -103,6 +116,9 @@ class ControllerExtensionPaymentAlliance extends Controller
                 $this->url,
                 $order['total']
             );
+            if ($this->config->get('payment_alliance_hpp_type') === 'PREAUTH') {
+                $data['originalAuthorizedAmount'] = (int)($order['total'] * 100);
+            }
             $this->model_extension_payment_alliance->saveAllianceOrder(
                 $data,
                 $this->session->data['order_id']
@@ -120,18 +136,24 @@ class ControllerExtensionPaymentAlliance extends Controller
 
     /**
      * @param string $status
-     * @param array $allianceOrder
+     * @param int $orderId
      * @param array $order
+     * @param bool $isPreauth
      * @return void
      */
-    private function handleOrderStatusChange(string $status, array $allianceOrder, array $order): void
+    private function handleOrderStatusChange(string $status, int $orderId, array $order, bool $isPreauth = false): void
     {
-        $orderId = $allianceOrder['order_id'];
+        if ($status === AllianceConfig::ALLIANCE_ORDER_SUCCESS_STATUS) {
 
-        if ($status === 'SUCCESS') {
+            $message = !$isPreauth
+                ? sprintf($this->language->get('text_transaction_success'), $orderId)
+                : $this->language->get('text_completion_success');
+            $statusSuccess = !$isPreauth ? $this->config->get('payment_alliance_paid_status')
+                : $this->config->get('payment_alliance_completion_status');
             $this->model_checkout_order->addOrderHistory(
                 $orderId,
-                $this->config->get('payment_alliance_paid_status')
+                $statusSuccess,
+                $message
             );
             $this->model_account_customer->addTransaction(
                 $order['customer_id'],
@@ -139,12 +161,14 @@ class ControllerExtensionPaymentAlliance extends Controller
                 sprintf($this->language->get('text_transaction_success'), $orderId),
                 $order['total']
             );
-        } elseif ($status === 'PENDING' || $status === 'REQUIRED_3DS') {
+        } elseif ($status === AllianceConfig::ALLIANCE_ORDER_PENDING_STATUS
+            || $status === AllianceConfig::ALLIANCE_ORDER_REQUIRED_3DS_STATUS
+        ) {
             $this->model_checkout_order->addOrderHistory(
                 $orderId,
                 $this->config->get('payment_alliance_pending_status')
             );
-        } elseif ($status === 'FAIL') {
+        } elseif ($status === AllianceConfig::ALLIANCE_ORDER_FAIL_STATUS) {
             $this->model_checkout_order->addOrderHistory(
                 $orderId,
                 $this->config->get('payment_alliance_error_status')
@@ -156,21 +180,5 @@ class ControllerExtensionPaymentAlliance extends Controller
                 $order['total']
             );
         }
-    }
-
-    /**
-     * @param array $data
-     * @return string
-     */
-    private function getA2AOperationStatus(array $data): string
-    {
-        if (!empty($data['operation'])
-            && !empty($data['operation']['status'])
-            && $data['operation']['type'] === 'ACCOUNT_2_ACCOUNT'
-        ) {
-            return $data['operation']['status'];
-        }
-
-        return '';
     }
 }

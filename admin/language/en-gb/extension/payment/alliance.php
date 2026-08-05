@@ -148,3 +148,15 @@ $_['text_confirm_return_requests'] = 'Create return requests for selected produc
 
 $_['text_alliance_operation_purchase_not_found'] = 'Purchase operation not found.';
 
+$_['entry_preauth_exp_date']  = 'Pre-Auth Expiration Period';
+$_['help_preauth_exp_date']   = 'Set the pre-authorization hold period (min 2h, max 28 days). Only applies when PREAUTH type is selected.';
+$_['entry_preauth_status']    = 'Status after preauthorization (PREAUTH)';
+$_['help_preauth_status']     = 'Status assigned after PREAUTH order creation, awaiting admin confirmation.';
+$_['entry_completion_status']  = 'Status after successful capture (PREAUTH)';
+$_['help_completion_status']   = 'Order will be moved to this status after a successful PREAUTH capture via the "Confirm Payment" button.';
+$_['error_completion_amount']  = 'Completion rejected: order amount differs by more than 20% from the original authorized amount.';
+$_['button_confirm_payment']   = '<i class="fa fa-check"></i> Confirm Payment';
+$_['text_preauth_success']  = 'Preauthorization success.';
+$_['text_completion_success']  = 'Payment successfully captured.';
+$_['error_not_preauth_order']  = 'This order is not a PREAUTH order.';
+

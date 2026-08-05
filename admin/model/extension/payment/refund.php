@@ -55,9 +55,9 @@ class ModelExtensionPaymentRefund extends Model
                         $decrypt_auth,
                         $allianceOrder['hpp_order_id']
                     );
-                    $purchaseOperation = $this->getOperationPurchaseData($eComResponse);
+                    $purchaseOperation = AllianceHelper::getOperationPurchaseData($eComResponse);
                 } else {
-                    $purchaseOperation = $this->getOperationPurchaseData($allianceOrderCallBack);
+                    $purchaseOperation = AllianceHelper::getOperationPurchaseData($allianceOrderCallBack);
                 }
 
                 if (empty($purchaseOperation)) {
@@ -163,30 +163,6 @@ class ModelExtensionPaymentRefund extends Model
         return $ocOrderTotal === $refoundAmont;
     }
 
-    /**
-     * @param array $orderCallBackData
-     * @return array
-     */
-    private function getOperationPurchaseData(array $orderCallBackData): array
-    {
-        $purchaseOperation = [];
-        $operationTypes = [
-            'PURCHASE',
-            'ACCOUNT_2_ACCOUNT'
-        ];
-
-        if (!empty($orderCallBackData['operation'])) {
-            $purchaseOperation = $orderCallBackData['operation'];
-        } elseif (!empty($orderCallBackData['operations'])) {
-            foreach ($orderCallBackData['operations'] as $operation) {
-                if (!empty($operation['type']) && in_array($operation['type'], $operationTypes)) {
-                    $purchaseOperation = $operation;
-                }
-            }
-        }
-
-        return $purchaseOperation;
-    }
 
     /**
      * @param $orderId

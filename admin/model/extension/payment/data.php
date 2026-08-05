@@ -50,6 +50,12 @@ class ModelExtensionPaymentData extends Model
             'entry_complete_status' => $this->language->get('entry_complete_status'),
             'help_paid_status' => $this->language->get('help_paid_status'),
             'button_save' => $this->language->get('button_save'),
+            'entry_preauth_exp_date' => $this->language->get('entry_preauth_exp_date'),
+            'help_preauth_exp_date' => $this->language->get('help_preauth_exp_date'),
+            'entry_preauth_status' => $this->language->get('entry_preauth_status'),
+            'help_preauth_status' => $this->language->get('help_preauth_status'),
+            'entry_completion_status' => $this->language->get('entry_completion_status'),
+            'help_completion_status' => $this->language->get('help_completion_status'),
         ];
     }
 
@@ -107,6 +113,8 @@ class ModelExtensionPaymentData extends Model
                 ?? $config->get('payment_alliance_merchant_id'),
             'payment_alliance_hpp_type' => $post['payment_alliance_hpp_type']
                 ?? $config->get('payment_alliance_hpp_type'),
+            'payment_alliance_preauth_exp_date' => $post['payment_alliance_preauth_exp_date']
+                ?? $config->get('payment_alliance_preauth_exp_date'),
             'payment_alliance_status' => $post['payment_alliance_status']
                 ?? $config->get('payment_alliance_status'),
             'payment_alliance_jwt_param_x' => $post['payment_alliance_jwt_param_x']
@@ -176,6 +184,10 @@ class ModelExtensionPaymentData extends Model
                 ?? $config->get('payment_alliance_refunded_status'),
             'payment_alliance_refund_fail_status' => $post['payment_alliance_refund_fail_status']
                 ?? $config->get('payment_alliance_refund_fail_status'),
+            'payment_alliance_preauth_status' => $post['payment_alliance_preauth_status']
+                ?? $config->get('payment_alliance_preauth_status'),
+            'payment_alliance_completion_status' => $post['payment_alliance_completion_status']
+                ?? $config->get('payment_alliance_completion_status'),
         ];
     }
 

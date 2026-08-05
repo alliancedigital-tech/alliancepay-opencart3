@@ -17,91 +17,105 @@ use SimpleJWT\Keys\KeySet;
 class AllianceEcom
 {
     const AUTHORIZE_VIRTUAL_DEVICE = 'api-gateway/authorize_virtual_device';
+
     const CREATE_ORDER = 'ecom/execute_request/hpp/v1/create-order';
+
     const CREATE_REFUND = 'ecom/execute_request/payments/v3/refund';
 
     const CHECK_OPERATIONS = 'ecom/execute_request/hpp/v1/operations';
 
     const NOTIFICATION_URL_ROUTE = 'extension/payment/alliance/notifyCallback';
+
     const ALGORITHM = 'ECDH-ES+A256KW';
+
     const ENCRYPTION = 'A256GCM';
 
     const HPP_PAY_TYPE_PURCHASE = 'PURCHASE';
+
     const HPP_PAY_TYPE_A2A = 'A2A';
+
+    const HPP_PAY_TYPE_PREAUTH = 'PREAUTH';
+
+    const COMPLETE_PAYMENT = 'ecom/execute_request/payments/v1/completion';
+
     const A2A_DIRECT_TYPE = 'BANK_LINK';
+
     const A2A_PRIORITY_BANK_CODE = 'ALL_BANKS';
+
     const A2A_OPERATION_TYPE = 'ACCOUNT_2_ACCOUNT';
 
     private $dateTime;
+
     private $client;
+
     private $config;
 
     private $logger;
 
     private $validationRules = [
         'senderCustomerId' => [
-            'type'     => 'string',
-            'max_len'  => 255,
+            'type' => 'string',
+            'max_len' => 255,
             'required' => true,
         ],
         'senderFirstName' => [
-            'type'           => 'string',
-            'max_len'        => 30,
-            'required'       => false,
+            'type' => 'string',
+            'max_len' => 30,
+            'required' => false,
             'no_only_digits' => true,
-            'pattern'        => '/^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ]([a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ\s\-\']*[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ])?$/u',
-            'stop_words'     => ['NULL', '3D SECURE', 'SURNAME', 'CARDHOLDER', 'UNKNOWN']
+            'pattern' => '/^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ]([a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ\s\-\']*[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ])?$/u',
+            'stop_words' => ['NULL', '3D SECURE', 'SURNAME', 'CARDHOLDER', 'UNKNOWN']
         ],
         'senderLastName' => [
-            'type'           => 'string',
-            'max_len'        => 30,
-            'required'       => false,
+            'type' => 'string',
+            'max_len' => 30,
+            'required' => false,
             'no_only_digits' => true,
-            'pattern'        => '/^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ]([a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ\s\-\']*[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ])?$/u'
+            'pattern' => '/^[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ]([a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ\s\-\']*[a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ])?$/u'
         ],
         'senderEmail' => [
-            'type'     => 'string',
-            'max_len'  => 256,
+            'type' => 'string',
+            'max_len' => 256,
             'required' => false
         ],
         'senderCountry' => [
-            'type'     => 'string',
-            'max_len'  => 3,
+            'type' => 'string',
+            'max_len' => 3,
             'required' => false
         ],
         'senderRegion' => [
-            'type'     => 'string',
-            'max_len'  => 255,
+            'type' => 'string',
+            'max_len' => 255,
             'required' => false
         ],
         'senderCity' => [
-            'type'     => 'string',
-            'max_len'  => 25,
+            'type' => 'string',
+            'max_len' => 25,
             'required' => false
         ],
         'senderStreet' => [
-            'type'     => 'string',
-            'max_len'  => 35,
+            'type' => 'string',
+            'max_len' => 35,
             'required' => false
         ],
         'senderAdditionalAddress' => [
-            'type'     => 'string',
-            'max_len'  => 255,
+            'type' => 'string',
+            'max_len' => 255,
             'required' => false
         ],
         'senderIp' => [
-            'type'     => 'string',
-            'max_len'  => 50,
+            'type' => 'string',
+            'max_len' => 50,
             'required' => false
         ],
         'senderPhone' => [
-            'type'     => 'numeric_string',
-            'max_len'  => 20,
+            'type' => 'numeric_string',
+            'max_len' => 20,
             'required' => false
         ],
         'senderZipCode' => [
-            'type'     => 'string',
-            'max_len'  => 50,
+            'type' => 'string',
+            'max_len' => 50,
             'required' => false
         ],
     ];
@@ -157,7 +171,7 @@ class AllianceEcom
             $response = $this->client->request(self::AUTHORIZE_VIRTUAL_DEVICE, [
                 'headers' => $this->getHeaders(),
                 'json' => [
-                    'serviceCode' =>  $payment_alliance_service_code_id,
+                    'serviceCode' => $payment_alliance_service_code_id,
                 ]
             ]);
         } catch (Throwable $e) {
@@ -199,7 +213,7 @@ class AllianceEcom
 
         $jwe_decrypted = JWE::decrypt($jwe_token, $set, self::ALGORITHM);
 
-        return (array) json_decode($jwe_decrypted->getPlaintext());
+        return (array)json_decode($jwe_decrypted->getPlaintext());
     }
 
     /**
@@ -381,7 +395,60 @@ class AllianceEcom
             $paymentData['merchantComment'] = 'Payment for order #' . $orderInfo['order_id'];
         }
 
+        if ($config->get('payment_alliance_hpp_type') === self::HPP_PAY_TYPE_PREAUTH) {
+            $paymentData['preAuthExpDate'] = $this->calculatePreAuthExpDate(
+                $config->get('payment_alliance_preauth_exp_date')
+            );
+        }
+
         return $paymentData;
+    }
+
+    /**
+     * @param array $decrypt_auth
+     * @param array $allianceOrder
+     * @param $url
+     * @return bool
+     * @throws Throwable
+     */
+    public function executeCompletion(array $decrypt_auth, array $allianceOrder, $url): bool
+    {
+        $notificationUrl = $this->getNotificationUrl($url);
+        $body = [
+            'merchantRequestId' => uniqid(),
+            'merchantId' => $allianceOrder['merchant_id'],
+            'originalOperationId' => $allianceOrder['operation_id'],
+            'coinAmount' => (string)$allianceOrder['coin_amount'],
+            'date' => $this->dateTime::getSiteDateTime($this->config),
+            'notificationUrl' => $notificationUrl,
+        ];
+
+        try {
+            $serverPublicKey = json_decode(
+                json_encode($this->getServerPublicKey($decrypt_auth)),
+                true
+            );
+            $completionEncryptBody = $this->encryptRequest(
+                $serverPublicKey,
+                json_encode($body, JSON_PRETTY_PRINT)
+            );
+            $response = $this->client->request(self::COMPLETE_PAYMENT, [
+                'headers' => $this->getHeaders($decrypt_auth),
+                'body' => $completionEncryptBody
+            ]);
+
+            $contents = json_decode($response->getBody()->getContents(), true);
+
+            if (isset($contents['jwe'])) {
+                $completionResult = $this->decryptResponse($contents['jwe']);
+            }
+        } catch (Throwable $e) {
+            $this->logger->log(AllianceLogger::ERROR, 'Can\'t execute completion: ' . $e->getMessage());
+            throw $e;
+        }
+
+        return !empty($completionResult['status'])
+            && $completionResult['status'] === AllianceConfig::ALLIANCE_ORDER_SUCCESS_STATUS;
     }
 
     /**
@@ -399,6 +466,32 @@ class AllianceEcom
             'notificationUrl' => $url,
             'date' => $this->dateTime::getSiteDateTime($this->config)
         ];
+    }
+
+    /**
+     * @param string $setting
+     * @return string
+     */
+    private function calculatePreAuthExpDate(string $setting): string
+    {
+        $map = [
+            '2h' => '+2 hours',
+            '4h' => '+4 hours',
+            '6h' => '+6 hours',
+            '12h' => '+12 hours',
+            '1d' => '+1 day',
+            '2d' => '+2 days',
+            '7d' => '+7 days',
+            '14d' => '+14 days',
+            '28d' => '+28 days',
+        ];
+        $modifier = $map[$setting] ?? '+2 hours';
+        $timezone = $this->config->get('config_timezone') ?: 'UTC';
+        $dt = new \DateTime('now', new \DateTimeZone($timezone));
+        $dt->modify('+30 sec');
+        $dt->modify($modifier);
+
+        return preg_replace('/(\.\d{2})\d/', '$1', $dt->format('Y-m-d H:i:s.vP'));
     }
 
     /**
@@ -446,7 +539,8 @@ class AllianceEcom
      * @param $rules
      * @return array
      */
-    public function validateCustomerData($data, $rules) {
+    public function validateCustomerData($data, $rules)
+    {
         $validated = [];
 
         foreach ($rules as $field => $rule) {

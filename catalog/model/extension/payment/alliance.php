@@ -55,11 +55,18 @@ class ModelExtensionPaymentAlliance extends Model
     {
         $this->load->model('checkout/order');
 
-        if ($data['orderStatus'] == 'PENDING' || $data['orderStatus'] == 'REQUIRED_3DS'){
+        if (($data['hppPayType'] ?? '') === 'PREAUTH') {
+            $this->load->language('extension/payment/alliance');
+            $this->model_checkout_order->addOrderHistory(
+                $order_id,
+                (int)$this->config->get('payment_alliance_preauth_status'),
+                $this->language->get('text_preauth_success')
+            );
+        } elseif ($data['orderStatus'] == 'PENDING' || $data['orderStatus'] == 'REQUIRED_3DS') {
             $this->model_checkout_order->addOrderHistory($order_id, $this->config->get('payment_alliance_pending_status'));
         }
 
-        if ($data['orderStatus'] == 'FAIL'){
+        if ($data['orderStatus'] == 'FAIL') {
             $this->model_checkout_order->addOrderHistory($order_id, $this->config->get('payment_alliance_error_status'));
         }
 
@@ -85,6 +92,10 @@ class ModelExtensionPaymentAlliance extends Model
 
         if (!empty($data['coinAmount'])) {
             $implode[] = "`coin_amount` = '" . (int) $data['coinAmount'] . "'";
+        }
+
+        if (isset($data['originalAuthorizedAmount'])) {
+            $implode[] = "`original_authorized_amount` = '" . (int) $data['originalAuthorizedAmount'] . "'";
         }
 
         if (!empty($data['hppPayType'])) {
@@ -126,9 +137,10 @@ class ModelExtensionPaymentAlliance extends Model
     /**
      * @param array $data
      * @param int $order_id
+     * @param string $operationId
      * @return void
      */
-    public function saveCallBack(array $data, int $order_id)
+    public function saveCallBack(array $data, int $order_id, string $operationId = '')
     {
         $this->load->model('checkout/order');
 
@@ -140,6 +152,10 @@ class ModelExtensionPaymentAlliance extends Model
 
         if (!empty($data['orderStatus'])) {
             $implode[] = "`order_status` = '" . $data['orderStatus'] . "'";
+        }
+
+        if (!empty($operationId)) {
+            $implode[] = "`operation_id` = '" . $operationId . "'";
         }
 
         $implode[] = "`updated_at` = '" . $this->db->escape(date('Y-m-d H:i:s')) . "'";

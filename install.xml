@@ -2,7 +2,7 @@
 <modification>
     <name>AlliancePayment</name>
     <code>alliance</code>
-    <version>1.4.0</version>
+    <version>1.5.0</version>
     <author>Alliance Dgtl</author>
     <link>https://docs.merchant.alb.ua/</link>
     <file path="admin/controller/sale/order.php">
