@@ -16,6 +16,7 @@ class ModelExtensionPaymentRefund extends Model
     {
         parent::__construct($registry);
         $this->load->library('AllianceConfig');
+        $this->load->library('AllianceHelper');
         $this->load->library('AllianceEcom');
         $this->load->library('AllianceLogger');
         $this->load->model('extension/payment/alliance');
@@ -67,9 +68,23 @@ class ModelExtensionPaymentRefund extends Model
                     ];
                 }
 
-                $coinAmount = $isFullReturn
-                    ? $purchaseOperation['coinAmount']
-                    : $this->getPartialRefundCoinAmount($orderId, $productIds, $refundShipping);
+                if ($isFullReturn) {
+                    if ($allianceOrder['hpp_pay_type'] === AllianceConfig::OPERATION_TYPE_PREAUTH) {
+                        $coinAmount = $this->getCompletionOperationCoinAmount(
+                            $allianceOrderCallBack,
+                            $allianceOrder
+                        );
+                    } else {
+                        $coinAmount = (int)$purchaseOperation['coinAmount'];
+                    }
+                } else {
+                    $coinAmount = $this->getPartialRefundCoinAmount(
+                        $orderId,
+                        $productIds,
+                        $refundShipping,
+                        (float)($allianceOrder['conversion_rate'] ?? 0)
+                    );
+                }
                 $refundData = $this->prepareRefundData($purchaseOperation, $coinAmount);
 
                 $jwe_token = $this->ecom->authorizeByVirtualDevice(
@@ -165,19 +180,48 @@ class ModelExtensionPaymentRefund extends Model
 
 
     /**
+     * @param array $callBackData
+     * @param array $allianceOrder
+     * @return int
+     */
+    private function getCompletionOperationCoinAmount(array $callBackData, array $allianceOrder): int
+    {
+        $operations = $callBackData['operations'] ?? [];
+        if (!empty($callBackData['operation'])) {
+            $operations[] = $callBackData['operation'];
+        }
+
+        $completionCoinAmount = null;
+        foreach ($operations as $operation) {
+            if (($operation['type'] ?? '') === AllianceConfig::OPERATION_TYPE_COMPLETION
+                && ($operation['status'] ?? '') === AllianceConfig::ALLIANCE_ORDER_SUCCESS_STATUS
+            ) {
+                $completionCoinAmount = (int)$operation['coinAmount'];
+            }
+        }
+
+        if ($completionCoinAmount !== null) {
+            return $completionCoinAmount;
+        }
+
+        return (int)$allianceOrder['coin_amount'];
+    }
+
+    /**
      * @param $orderId
      * @param $productIds
      * @param $refundShipping
+     * @param float $conversionRate
      * @return int
      */
-    private function getPartialRefundCoinAmount($orderId, $productIds, $refundShipping = 0)
+    private function getPartialRefundCoinAmount($orderId, $productIds, $refundShipping = 0, float $conversionRate = 0.0)
     {
-        $coinAmount = 0;
+        $amountInOrderCurrency = 0.0;
         $products = $this->model_sale_order->getOrderProducts($orderId);
 
         foreach ($products as $product) {
             if (in_array($product['order_product_id'], $productIds)) {
-                $coinAmount += $this->getCoinAmount($product['total']);
+                $amountInOrderCurrency += (float)$product['total'];
             }
         }
 
@@ -185,12 +229,16 @@ class ModelExtensionPaymentRefund extends Model
             $order_totals = $this->model_sale_order->getOrderTotals($orderId);
             foreach ($order_totals as $total) {
                 if ($total['code'] == 'shipping') {
-                    $coinAmount += $this->getCoinAmount($total['value']);
+                    $amountInOrderCurrency += (float)$total['value'];
                 }
             }
         }
 
-        return $coinAmount;
+        if ($conversionRate > 0) {
+            return (int)round($amountInOrderCurrency * $conversionRate * 100);
+        }
+
+        return self::toCoinAmount($amountInOrderCurrency);
     }
 
     /**

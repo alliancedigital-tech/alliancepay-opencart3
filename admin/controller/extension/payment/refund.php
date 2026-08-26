@@ -17,6 +17,9 @@ class ControllerExtensionPaymentRefund extends Controller
         $this->load->model('extension/payment/alliance');
         $this->load->model('extension/payment/refund');
         $this->load->library('AllianceConfig');
+        $this->load->library('AllianceHelper');
+        $this->load->library('AllianceLogger');
+        $this->logger = new AllianceLogger($registry);
     }
 
     /**
@@ -95,11 +98,16 @@ class ControllerExtensionPaymentRefund extends Controller
      */
     public function refund()
     {
-        $orderId = $this->request->get['order_id'] ?? 0;
-        $isFullRefund = $this->request->post['is_full_refund'] == 1;
-        $productIds = $this->request->post['product_ids'] ?? [];
-        $refundShipping = $this->request->post['refund_shipping'] ?? 0;
-        $data = $this->model_extension_payment_refund->refundOrder($orderId, $isFullRefund, $productIds, $refundShipping);
+        try {
+            $orderId = $this->request->get['order_id'] ?? 0;
+            $isFullRefund = $this->request->post['is_full_refund'] == 1;
+            $productIds = $this->request->post['product_ids'] ?? [];
+            $refundShipping = $this->request->post['refund_shipping'] ?? 0;
+            $data = $this->model_extension_payment_refund->refundOrder($orderId, $isFullRefund, $productIds, $refundShipping);
+        } catch (\Exception $e) {
+            $this->logger->error($e->getMessage());
+        }
+
         $this->response->addHeader("Content-Type: application/json");
         $this->response->setOutput(json_encode($data));
     }

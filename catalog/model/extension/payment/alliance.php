@@ -98,6 +98,10 @@ class ModelExtensionPaymentAlliance extends Model
             $implode[] = "`original_authorized_amount` = '" . (int) $data['originalAuthorizedAmount'] . "'";
         }
 
+        if (isset($data['currencyCode'])) {
+            $implode[] = "`currency_code` = '" . (int) $data['currencyCode'] . "'";
+        }
+
         if (!empty($data['hppPayType'])) {
             $implode[] = "`hpp_pay_type` = '" . $this->db->escape($data['hppPayType']) . "'";
         }
@@ -144,8 +148,6 @@ class ModelExtensionPaymentAlliance extends Model
     {
         $this->load->model('checkout/order');
 
-        $data = $this->prepareOperations($data);
-
         $sql = "UPDATE `" . DB_PREFIX . "alliance_checkout_integration_order` SET";
 
         $implode = [];
@@ -158,9 +160,17 @@ class ModelExtensionPaymentAlliance extends Model
             $implode[] = "`operation_id` = '" . $operationId . "'";
         }
 
+        $conversionRate = $data['operation']['conversionRate'] ?? null;
+        if ($conversionRate !== null && (float)$conversionRate > 0) {
+            $implode[] = "`conversion_rate` = '" . $this->db->escape((string)(float)$conversionRate) . "'";
+        }
+
         $implode[] = "`updated_at` = '" . $this->db->escape(date('Y-m-d H:i:s')) . "'";
-        $implode[] = "`callback_data` = '" . $this->db->escape(json_encode($data)) . "'";
         $implode[] = "`is_callback_returned` = '" . $this->db->escape(1) . "'";
+
+        $data = $this->prepareOperations($data);
+
+        $implode[] = "`callback_data` = '" . $this->db->escape(json_encode($data)) . "'";
 
         if ($implode) {
             $sql .= implode(', ', $implode);

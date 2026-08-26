@@ -41,13 +41,15 @@ class ModelExtensionPaymentAlliance extends Model
      * @param array $e_com_response
      * @param bool $is_error
      * @param bool $isRefunded
+     * @param array $allianceOrder
      * @return array
      */
     public function fillOperationStatusData(
         array $data,
         array $e_com_response,
         bool  $is_error,
-        bool  $isRefunded = false
+        bool  $isRefunded = false,
+        array $allianceOrder = []
     ): array
     {
         $data['is_error'] = $is_error;
@@ -59,7 +61,6 @@ class ModelExtensionPaymentAlliance extends Model
                 $data['msg_type'] = $e_com_response['msgType'];
             } else {
                 $data['is_refund'] = $isRefunded;
-                $data['coin_amount'] = $this->convertCoinAmount($amount);
                 $data['ecom_order_id'] = $e_com_response['ecomOrderId'] ?? $e_com_response['ecom_order_id'] ?? '';
                 $data['status_url'] = $e_com_response['statusUrl'] ?? $e_com_response['status_url'] ?? '';
                 $data['merchant_id'] = $e_com_response['merchantId'] ?? $e_com_response['merchant_id'] ?? '';
@@ -69,6 +70,29 @@ class ModelExtensionPaymentAlliance extends Model
                     $e_com_response['expiredOrderDate'] ?? $e_com_response['expired_order_date'] ?? '';
                 $data['order_status'] = $e_com_response['orderStatus'] ?? $e_com_response['order_status'] ?? '';
                 $data['create_date'] = $e_com_response['createDate'] ?? $e_com_response['create_date'] ?? '';
+                $data['amount_currency_alpha'] = '';
+                $data['amount_in_currency'] = '';
+
+                $data['coin_amount'] = $this->convertCoinAmount($amount);
+
+                if (!empty($allianceOrder)) {
+                    $conversionRate = (float)($allianceOrder['conversion_rate'] ?? 0);
+                    $currencyCode   = (int)($allianceOrder['currency_code'] ?? 0);
+
+                    if ($conversionRate > 0 && $currencyCode > 0) {
+                        $alphaMap = array_flip(\AllianceConfig::CURRENCY_CODE_MAP);
+                        $currencyAlpha = $alphaMap[$currencyCode] ?? '';
+
+                        if ($currencyAlpha !== '' && $currencyAlpha !== 'UAH') {
+                            $foreignAmount = (float)$amount / 100;
+                            $data['amount_in_currency'] = number_format($foreignAmount, 2, '.', ' ');
+                            $data['amount_currency_alpha'] = $currencyAlpha;
+
+                            $uahAmount = $foreignAmount * $conversionRate;
+                            $data['coin_amount'] = number_format($uahAmount, 2, ',', '');
+                        }
+                    }
+                }
             }
         }
 

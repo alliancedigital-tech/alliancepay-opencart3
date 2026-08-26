@@ -121,6 +121,9 @@
                 <option value="A2A" {{ payment_alliance_hpp_type == 'A2A' ? 'selected="selected"' : '' }}>A2A</option>
                 <option value="PREAUTH" {{ payment_alliance_hpp_type == 'PREAUTH' ? 'selected="selected"' : '' }}>PREAUTH</option>
               </select>
+              <div id="a2a-currency-warning" class="alert alert-danger" style="display:none; margin-top:8px; margin-bottom:0;">
+                <i class="fa fa-exclamation-triangle"></i> {{ error_a2a_uah_only|format(config_currency) }}
+              </div>
               <p class="help-block">{{ help_hpp_type }}</p>
             </div>
           </div>
@@ -314,13 +317,29 @@
 </style>
 <script>
   (function () {
-    var hppSelect = document.getElementById('input-hpp-type');
+    var hppSelect    = document.getElementById('input-hpp-type');
     var preauthGroup = document.getElementById('preauth-exp-date-group');
+    var a2aWarning   = document.getElementById('a2a-currency-warning');
+    var saveBtn      = document.querySelector('button[form="form-alliance-account"]');
+    var siteCurrency = '{{ config_currency }}';
+
     function togglePreauth() {
       preauthGroup.style.display = (hppSelect.value === 'PREAUTH') ? '' : 'none';
     }
-    hppSelect.addEventListener('change', togglePreauth);
+
+    function toggleA2aWarning() {
+      var isA2aNonUah = (hppSelect.value === 'A2A' && siteCurrency !== 'UAH');
+      if (a2aWarning) { a2aWarning.style.display = isA2aNonUah ? '' : 'none'; }
+      if (saveBtn)    { saveBtn.disabled = isA2aNonUah; }
+    }
+
+    hppSelect.addEventListener('change', function () {
+      togglePreauth();
+      toggleA2aWarning();
+    });
+
     togglePreauth();
+    toggleA2aWarning();
   })();
 </script>
 {{ footer }}

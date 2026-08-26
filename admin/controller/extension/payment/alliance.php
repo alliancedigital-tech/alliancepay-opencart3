@@ -10,7 +10,7 @@ declare(strict_types=1);
  */
 class ControllerExtensionPaymentAlliance extends Controller
 {
-    public $version = '1.5.0';
+    public $version = '1.6.0';
     private $events = [
         [
             'trigger'    => 'admin/view/sale/order_info/after',
@@ -61,6 +61,19 @@ class ControllerExtensionPaymentAlliance extends Controller
             $this->request->post['action'] === 'save'
         ) {
             $post = $this->request->post;
+
+            $siteCurrency = $this->config->get('config_currency');
+            if (($post['payment_alliance_hpp_type'] ?? '') === 'A2A' && $siteCurrency !== 'UAH') {
+                $this->session->data['warning'] = sprintf(
+                    $this->language->get('error_a2a_uah_only'),
+                    $siteCurrency
+                );
+                $this->response->redirect(
+                    $this->url->link('extension/payment/alliance', 'user_token=' . $this->getUserToken(), true)
+                );
+                return;
+            }
+
             $catalog_url = $this->config->get('config_url') ?: HTTP_CATALOG;
             $defaults = [
                 'payment_alliance_success_url' => $catalog_url . 'index.php?route=checkout/success',
@@ -344,7 +357,8 @@ class ControllerExtensionPaymentAlliance extends Controller
                         $data,
                         $order_callback,
                         false,
-                        $this->model_extension_payment_refund->checkIfOrderRefunded($order_id)
+                        $this->model_extension_payment_refund->checkIfOrderRefunded($order_id),
+                        $alliance_order
                     )
                 )
             );
@@ -380,7 +394,8 @@ class ControllerExtensionPaymentAlliance extends Controller
                         $data,
                         $e_com_response,
                         true,
-                        $this->model_extension_payment_refund->checkIfOrderRefunded($order_id)
+                        $this->model_extension_payment_refund->checkIfOrderRefunded($order_id),
+                        $alliance_order
                     )
                 )
             );
@@ -395,7 +410,8 @@ class ControllerExtensionPaymentAlliance extends Controller
                     $data,
                     $e_com_response,
                     false,
-                    $this->model_extension_payment_refund->checkIfOrderRefunded($order_id)
+                    $this->model_extension_payment_refund->checkIfOrderRefunded($order_id),
+                    $alliance_order
                 )
             )
         );
@@ -435,22 +451,27 @@ class ControllerExtensionPaymentAlliance extends Controller
         }
 
         $order = $this->model_sale_order->getOrder($order_id);
-        $current_coin_amount = (int)($order['total'] * 100);
+
+        $conversionRate = (float)($alliance_order['conversion_rate'] ?? 0);
+
+        $current_minor_units = (int)round($order['total'] * 100);
         $original_amount = (int)$alliance_order['original_authorized_amount'];
 
         if ($original_amount > 0) {
             $lower = (int)($original_amount * 0.80);
             $upper = (int)($original_amount * 1.20);
 
-            if ($current_coin_amount < $lower || $current_coin_amount > $upper) {
+            if ($current_minor_units < $lower || $current_minor_units > $upper) {
                 $logger = new AllianceLogger($this->registry);
                 $logger->log(
                     AllianceLogger::ERROR,
                     sprintf(
-                        'PREAUTH completion rejected for order #%d: current amount %d coins is outside ±20%% of original %d coins',
+                        'PREAUTH completion rejected for order #%d: current amount %d minor units'
+                        . ' is outside ±20%% of original %d minor units (conversionRate=%.6f)',
                         $order_id,
-                        $current_coin_amount,
-                        $original_amount
+                        $current_minor_units,
+                        $original_amount,
+                        $conversionRate
                     )
                 );
                 $json['message'] = $this->language->get('error_completion_amount');
@@ -461,6 +482,12 @@ class ControllerExtensionPaymentAlliance extends Controller
             }
         }
 
+        if ($conversionRate > 0) {
+            $coin_amount_uah = (int)round($order['total'] * $conversionRate * 100);
+        } else {
+            $coin_amount_uah = (int)round($order['total'] * 100);
+        }
+
         try {
             $this->load->library('AllianceEcom');
             $ecom = new AllianceEcom($this->registry);
@@ -468,7 +495,7 @@ class ControllerExtensionPaymentAlliance extends Controller
                 $this->config->get('payment_alliance_service_code_id')
             );
             $decrypt_auth = $ecom->decryptResponse($jwe_token);
-            $alliance_order['coin_amount'] = $current_coin_amount;
+            $alliance_order['coin_amount'] = $coin_amount_uah;
             $completionResult = $ecom->executeCompletion(
                 $decrypt_auth,
                 $alliance_order,

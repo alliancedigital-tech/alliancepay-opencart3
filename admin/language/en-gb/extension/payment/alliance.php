@@ -159,4 +159,5 @@ $_['button_confirm_payment']   = '<i class="fa fa-check"></i> Confirm Payment';
 $_['text_preauth_success']  = 'Preauthorization success.';
 $_['text_completion_success']  = 'Payment successfully captured.';
 $_['error_not_preauth_order']  = 'This order is not a PREAUTH order.';
+$_['error_a2a_uah_only']       = 'A2A payment type is supported only for UAH currency. Current store currency: %s. Please select PURCHASE or PREAUTH.';
 

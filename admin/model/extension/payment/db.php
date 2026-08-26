@@ -23,6 +23,8 @@ class ModelExtensionPaymentDb extends Model
             `merchant_id` VARCHAR(255) NOT NULL,
             `coin_amount` INT(11) NOT NULL,
             `original_authorized_amount` INT(11) DEFAULT NULL,
+            `currency_code` INT(3) DEFAULT NULL,
+            `conversion_rate` DECIMAL(18,6) DEFAULT NULL,
             `hpp_pay_type` VARCHAR(50) NOT NULL,
             `order_status` VARCHAR(50) NOT NULL,
             `payment_methods` TEXT NOT NULL,
@@ -91,7 +93,7 @@ class ModelExtensionPaymentDb extends Model
      */
     public function updateAllianceOrderTable()
     {
-        $columnsToAdd = "'updated_at', 'ecom_order_id', 'is_callback_returned', 'callback_data', 'original_authorized_amount'";
+        $columnsToAdd = "'updated_at', 'ecom_order_id', 'is_callback_returned', 'callback_data', 'original_authorized_amount', 'currency_code', 'conversion_rate'";
 
         $columnsDefinition = [
             'updated_at' => ' DATETIME NOT NULL AFTER `create_date`',
@@ -100,6 +102,8 @@ class ModelExtensionPaymentDb extends Model
             'is_callback_returned' => ' BOOLEAN DEFAULT FALSE AFTER `payment_methods`',
             'callback_data' => ' LONGTEXT AFTER `payment_methods`',
             'original_authorized_amount' => ' INT(11) DEFAULT NULL AFTER `coin_amount`',
+            'currency_code' => ' INT(3) DEFAULT NULL AFTER `original_authorized_amount`',
+            'conversion_rate' => ' DECIMAL(18,6) DEFAULT NULL AFTER `currency_code`',
         ];
 
         $orderIdKeyQuery = $this->db->query(

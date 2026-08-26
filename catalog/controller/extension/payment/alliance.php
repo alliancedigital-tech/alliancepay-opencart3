@@ -22,6 +22,7 @@ class ControllerExtensionPaymentAlliance extends Controller
         $this->load->library('AllianceLogger');
         $this->load->library('AllianceHelper');
         $this->load->library('AllianceConfig');
+        $this->logger = new AllianceLogger($registry);
         $this->ecom = new AllianceEcom($registry);
     }
 
@@ -42,6 +43,7 @@ class ControllerExtensionPaymentAlliance extends Controller
     {
         $request = file_get_contents('php://input');
         $request_data = json_decode($request, true);
+        $this->logger->info('Callback request', $request_data);
         $alliance_order = $this->model_extension_payment_alliance->getAllianceOrder($request_data['hppOrderId']);
 
         if (empty($request_data) || empty($request_data['operation'])) {
@@ -105,6 +107,12 @@ class ControllerExtensionPaymentAlliance extends Controller
         $data = [];
 
         try {
+            if ($this->config->get('payment_alliance_hpp_type') === AllianceEcom::HPP_PAY_TYPE_A2A
+                && ($order['currency_code'] ?? '') !== 'UAH'
+            ) {
+                throw new \RuntimeException($this->language->get('error_a2a_non_uah'));
+            }
+
             $jwe_token = $this->ecom->authorizeByVirtualDevice(
                 $this->config->get('payment_alliance_service_code_id')
             );
@@ -117,8 +125,13 @@ class ControllerExtensionPaymentAlliance extends Controller
                 $order['total']
             );
             if ($this->config->get('payment_alliance_hpp_type') === 'PREAUTH') {
-                $data['originalAuthorizedAmount'] = (int)($order['total'] * 100);
+                $data['originalAuthorizedAmount'] = (int)round($order['total'] * 100);
             }
+
+            if (!empty($order['currency_code'])) {
+                $data['currencyCode'] = AllianceConfig::getCurrencyCode((string)$order['currency_code']);
+            }
+
             $this->model_extension_payment_alliance->saveAllianceOrder(
                 $data,
                 $this->session->data['order_id']

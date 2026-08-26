@@ -9,5 +9,6 @@ $_["error_token_not_found"] = "Платіжний токен не знайден
 $_['text_transaction_success'] = 'Успішна транзакція для замовлення ID#%s';
 $_['text_transaction_fail'] = 'Помилка транзакції на замовлення ID#%s';
 $_['text_payment_something_wrong'] = "Щось пішло не так :(";
-$_['text_preauth_success']  = 'Преавторизація успішна';
+$_['text_preauth_success']     = 'Преавторизація успішна';
 $_['text_completion_success']  = 'Оплату успішно підтверджено.';
+$_['error_a2a_non_uah']        = 'Оплата A2A недоступна для замовлень не в гривні.';

@@ -131,6 +131,7 @@ class AllianceEcom
         $loader->library('AllianceLogger');
         $loader->library('AllianceGuzzleFacade');
         $loader->library('AllianceCountryCodeProvider');
+        $loader->library('AllianceConfig');
 
         $autoloadPaths = [
             DIR_SYSTEM . 'library/alliancepay/vendor/autoload.php',
@@ -399,6 +400,22 @@ class AllianceEcom
             $paymentData['preAuthExpDate'] = $this->calculatePreAuthExpDate(
                 $config->get('payment_alliance_preauth_exp_date')
             );
+        }
+
+        $hppPayType = $config->get('payment_alliance_hpp_type') ?? self::HPP_PAY_TYPE_PURCHASE;
+        if (in_array($hppPayType, [self::HPP_PAY_TYPE_PURCHASE, self::HPP_PAY_TYPE_PREAUTH], true)) {
+            $currencyAlpha = !empty($orderInfo['currency_code']) ? $orderInfo['currency_code'] : 'UAH';
+            try {
+                $paymentData['currencyCode'] = AllianceConfig::getCurrencyCode($currencyAlpha);
+            } catch (\InvalidArgumentException $e) {
+                $this->logger->log(
+                    AllianceLogger::ERROR,
+                    'Unsupported currency "' . $currencyAlpha . '" for order #'
+                    . ($orderInfo['order_id'] ?? '') . ': ' . $e->getMessage()
+                    . ' Falling back to UAH (980).'
+                );
+                $paymentData['currencyCode'] = AllianceConfig::CURRENCY_CODE_MAP['UAH'];
+            }
         }
 
         return $paymentData;

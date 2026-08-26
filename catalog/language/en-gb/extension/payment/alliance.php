@@ -9,5 +9,6 @@ $_["error_token_not_found"] = "Payment token not found";
 $_['text_transaction_success'] = 'Order ID#%s transaction success';
 $_['text_transaction_fail'] = 'Order ID#%s transaction failed';
 $_['text_transactions'] = 'Something went wrong :(';
-$_['text_preauth_success']  = 'Preauthorization success.';
+$_['text_preauth_success']     = 'Preauthorization success.';
 $_['text_completion_success']  = 'Payment successfully captured.';
+$_['error_a2a_non_uah']        = 'A2A payment is not available for non-UAH orders.';

@@ -113,6 +113,7 @@ class ModelExtensionPaymentData extends Model
                 ?? $config->get('payment_alliance_merchant_id'),
             'payment_alliance_hpp_type' => $post['payment_alliance_hpp_type']
                 ?? $config->get('payment_alliance_hpp_type'),
+            'config_currency' => $config->get('config_currency') ?: 'UAH',
             'payment_alliance_preauth_exp_date' => $post['payment_alliance_preauth_exp_date']
                 ?? $config->get('payment_alliance_preauth_exp_date'),
             'payment_alliance_status' => $post['payment_alliance_status']

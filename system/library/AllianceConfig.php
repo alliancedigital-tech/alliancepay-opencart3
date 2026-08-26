@@ -27,4 +27,29 @@ class AllianceConfig
     public const ALLIANCE_ORDER_FAIL_STATUS = 'FAIL';
     public const ALLIANCE_ORDER_PENDING_STATUS = 'PENDING';
     public const ALLIANCE_ORDER_REQUIRED_3DS_STATUS = 'REQUIRED_3DS';
+
+    /**
+     * ISO 4217 numeric currency codes for supported currencies.
+     */
+    public const CURRENCY_CODE_MAP = [
+        'UAH' => 980,
+        'USD' => 840,
+        'EUR' => 978,
+    ];
+
+    /**
+     * @param string $code
+     * @return int
+     */
+    public static function getCurrencyCode(string $code): int
+    {
+        if (!array_key_exists($code, self::CURRENCY_CODE_MAP)) {
+            throw new \InvalidArgumentException(
+                'Unsupported currency: "' . $code . '". Supported currencies: '
+                . implode(', ', array_keys(self::CURRENCY_CODE_MAP)) . '.'
+            );
+        }
+
+        return self::CURRENCY_CODE_MAP[$code];
+    }
 }

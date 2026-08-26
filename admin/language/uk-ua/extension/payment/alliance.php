@@ -86,3 +86,4 @@ $_['button_confirm_payment']   = '<i class="fa fa-check"></i> Підтверди
 $_['text_preauth_success']  = 'Преавторизація успішна';
 $_['text_completion_success']  = 'Оплату успішно підтверджено.';
 $_['error_not_preauth_order']  = 'Це замовлення не є PREAUTH замовленням.';
+$_['error_a2a_uah_only']       = 'Тип оплати A2A підтримується тільки для гривні (UAH). Поточна валюта магазину: %s. Будь ласка, оберіть PURCHASE або PREAUTH.';
