@@ -65,40 +65,20 @@
             </div>
           </div>
           <div class="form-group">
-            <label class="col-sm-2 control-label" for="payment_alliance_jwt_param_x">{{ entry_param_x }}</label>
+            <label class="col-sm-2 control-label" for="payment_alliance_jws_private_key">{{ entry_jws_private_key }}</label>
             <div class="col-sm-10">
-              <div class="input-group">
-                <span class="input-group-addon"><i class="fa fa-key fa-fw"></i></span>
-                <input type="text" name="payment_alliance_jwt_param_x" id="payment_alliance_jwt_param_x" value="{{ payment_alliance_jwt_param_x }}" placeholder="" class="form-control" />
-              </div>
+              <textarea name="payment_alliance_jws_private_key" id="payment_alliance_jws_private_key" rows="6" placeholder="-----BEGIN PRIVATE KEY-----" class="form-control">{{ payment_alliance_jws_private_key }}</textarea>
+              <p class="help-block">{{ help_jws_private_key }}</p>
             </div>
           </div>
           <div class="form-group">
-            <label class="col-sm-2 control-label" for="payment_alliance_jwt_param_y">{{ entry_param_y }}</label>
+            <label class="col-sm-2 control-label" for="payment_alliance_jws_key_id">{{ entry_jws_key_id }}</label>
             <div class="col-sm-10">
               <div class="input-group">
                 <span class="input-group-addon"><i class="fa fa-key fa-fw"></i></span>
-                <input type="text" name="payment_alliance_jwt_param_y" id="payment_alliance_jwt_param_y" value="{{ payment_alliance_jwt_param_y }}" placeholder="" class="form-control" />
+                <input type="text" name="payment_alliance_jws_key_id" id="payment_alliance_jws_key_id" value="{{ payment_alliance_jws_key_id }}" placeholder="" class="form-control" />
               </div>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="col-sm-2 control-label" for="payment_alliance_jwt_param_d">{{ entry_param_d }}</label>
-            <div class="col-sm-10">
-              <div class="input-group">
-                <span class="input-group-addon"><i class="fa fa-key fa-fw"></i></span>
-                <input type="text" name="payment_alliance_jwt_param_d" id="payment_alliance_jwt_param_d" value="{{ payment_alliance_jwt_param_d }}" placeholder="" class="form-control" />
-              </div>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="col-sm-2 control-label" for="payment_alliance_service_code_id">{{ alliance_service_code_id_api_key }}</label>
-            <div class="col-sm-10">
-              <div class="input-group">
-                <span class="input-group-addon"><i class="fa fa-code fa-fw"></i></span>
-                <input type="text" name="payment_alliance_service_code_id" id="payment_alliance_service_code_id" value="{{ payment_alliance_service_code_id }}" placeholder="" class="form-control" />
-              </div>
-              <p class="help-block">{{ help_service_code }}</p>
+              <p class="help-block">{{ help_jws_key_id }}</p>
             </div>
           </div>
           <div class="form-group">
@@ -143,6 +123,21 @@
                 <option value="28d" {{ payment_alliance_preauth_exp_date == '28d' ? 'selected="selected"' : '' }}>28 Days</option>
               </select>
               <p class="help-block">{{ help_preauth_exp_date }}</p>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="col-sm-2 control-label">{{ entry_hpp_payment_methods }}</label>
+            <div class="col-sm-10">
+              {% for method in ['CARD', 'APPLE_PAY', 'GOOGLE_PAY'] %}
+                <div class="checkbox">
+                  <label>
+                    <input type="checkbox" name="payment_alliance_hpp_payment_methods[]" value="{{ method }}"
+                      {{ method in payment_alliance_hpp_payment_methods ? 'checked="checked"' : '' }} /> {{ method }}
+                  </label>
+                </div>
+              {% endfor %}
+              <p class="help-block">{{ help_hpp_payment_methods }}</p>
             </div>
           </div>
 

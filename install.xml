@@ -2,7 +2,7 @@
 <modification>
     <name>AlliancePayment</name>
     <code>alliance</code>
-    <version>1.6.0</version>
+    <version>1.7.0</version>
     <author>Alliance Dgtl</author>
     <link>https://docs.merchant.alb.ua/</link>
     <file path="admin/controller/sale/order.php">
@@ -111,6 +111,69 @@
             }
             </script>
             ]]></add>
+        </operation>
+    </file>
+    <file path="admin/controller/common/column_left.php">
+        <operation>
+            <search index="0"><![CDATA[if ($marketplace) {]]></search>
+            <ignoreif><![CDATA[extension/payment/alliance_subscription']]></ignoreif>
+            <add position="before"><![CDATA[
+        $this->load->language('extension/payment/alliance_subscription');
+
+        if ($this->user->hasPermission('access', 'extension/payment/alliance_subscription')) {
+            $alliance_subscription_children = array();
+
+            if ($this->user->hasPermission('access', 'extension/payment/subscription_plan_template')) {
+                $alliance_subscription_children[] = array(
+                    'name'     => $this->language->get('text_menu_plan_template'),
+                    'href'     => $this->url->link('extension/payment/subscription_plan_template', 'user_token=' . $this->session->data['user_token'], true),
+                    'children' => array()
+                );
+            }
+
+            if ($this->user->hasPermission('access', 'extension/payment/subscription_plan')) {
+                $alliance_subscription_children[] = array(
+                    'name'     => $this->language->get('text_menu_plan'),
+                    'href'     => $this->url->link('extension/payment/subscription_plan', 'user_token=' . $this->session->data['user_token'], true),
+                    'children' => array()
+                );
+            }
+
+            if ($this->user->hasPermission('access', 'extension/payment/subscription')) {
+                $alliance_subscription_children[] = array(
+                    'name'     => $this->language->get('text_menu_subscription'),
+                    'href'     => $this->url->link('extension/payment/subscription', 'user_token=' . $this->session->data['user_token'], true),
+                    'children' => array()
+                );
+            }
+
+            if ($this->user->hasPermission('access', 'extension/payment/alliance')) {
+                $alliance_subscription_children[] = array(
+                    'name'     => $this->language->get('text_menu_payment_settings'),
+                    'href'     => $this->url->link('extension/payment/alliance', 'user_token=' . $this->session->data['user_token'], true),
+                    'children' => array()
+                );
+            }
+
+            if ($this->user->hasPermission('access', 'extension/payment/alliance_subscription')) {
+                $alliance_subscription_children[] = array(
+                    'name'     => $this->language->get('text_menu_subscription_settings'),
+                    'href'     => $this->url->link('extension/payment/alliance_subscription', 'user_token=' . $this->session->data['user_token'], true),
+                    'children' => array()
+                );
+            }
+
+            if ($alliance_subscription_children) {
+                $data['menus'][] = array(
+                    'id'       => 'menu-alliance-subscription',
+                    'icon'     => 'refresh',
+                    'name'     => $this->language->get('text_menu_heading'),
+                    'href'     => '',
+                    'children' => $alliance_subscription_children
+                );
+            }
+        }
+]]></add>
         </operation>
     </file>
 </modification>

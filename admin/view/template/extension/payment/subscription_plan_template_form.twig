@@ -1,0 +1,120 @@
+{{ header }}{{ column_left }}
+<div id="content">
+  <div class="page-header">
+    <div class="container-fluid">
+      <div class="pull-right">
+        <button type="submit" form="form-template" class="btn btn-primary"><i class="fa fa-save"></i></button>
+        <a href="{{ back }}" class="btn btn-default"><i class="fa fa-reply"></i></a>
+      </div>
+      <h1>{{ heading_title }}</h1>
+      <ul class="breadcrumb">
+        {% for breadcrumb in breadcrumbs %}
+          <li><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="container-fluid">
+    {% if warning %}
+      <div class="alert alert-danger alert-dismissible" role="alert">
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <i class="fa fa-exclamation-circle"></i> {{ warning }}
+      </div>
+    {% endif %}
+    {% if in_use is defined and in_use %}
+      <div class="alert alert-warning"><i class="fa fa-lock"></i> {{ text_template_in_use_notice }}</div>
+    {% endif %}
+
+    <div class="panel panel-default">
+      <div class="panel-body">
+        <form id="form-template" class="form-horizontal" action="{{ action }}" method="post">
+          <div class="form-group">
+            <label class="col-sm-2 control-label">{{ entry_code }}</label>
+            <div class="col-sm-10">
+              <input type="text" name="code" value="{{ template.code }}" class="form-control" {{ code_readonly ? 'readonly="readonly"' : '' }} />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="col-sm-2 control-label">{{ entry_name }}</label>
+            <div class="col-sm-10">
+              <input type="text" name="name" value="{{ template.name }}" class="form-control" {{ (in_use is defined and in_use) ? 'readonly="readonly"' : '' }} />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="col-sm-2 control-label">{{ entry_category }}</label>
+            <div class="col-sm-10">
+              <input type="text" name="category_indicator" value="{{ template.category_indicator }}" class="form-control" {{ (in_use is defined and in_use) ? 'readonly="readonly"' : '' }} />
+            </div>
+          </div>
+
+          <hr />
+          <h4>{{ text_rules }}</h4>
+          <p class="help-block">{{ help_rules }}</p>
+
+          <div id="rules-container">
+            {% for rule in rules %}
+              <div class="row rule-row" style="margin-bottom:10px;">
+                <div class="col-sm-3">
+                  <input type="number" name="rule_payment_number_from[]" value="{{ rule.paymentNumberFrom }}" class="form-control" placeholder="{{ entry_payment_from }}" />
+                </div>
+                <div class="col-sm-3">
+                  <input type="number" name="rule_payment_number_to[]" value="{{ rule.paymentNumberTo }}" class="form-control" placeholder="{{ entry_payment_to }}" />
+                </div>
+                <div class="col-sm-2">
+                  <input type="number" name="rule_interval_value[]" value="{{ rule.intervalValue }}" class="form-control" placeholder="{{ entry_interval_value }}" />
+                </div>
+                <div class="col-sm-3">
+                  <select name="rule_interval_unit[]" class="form-control">
+                    {% for unit in ['DAY', 'WEEK', 'MONTH'] %}
+                      <option value="{{ unit }}" {{ rule.intervalUnit == unit ? 'selected="selected"' : '' }}>{{ unit }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-sm-1">
+                  <button type="button" class="btn btn-danger remove-rule"><i class="fa fa-minus"></i></button>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+          <button type="button" id="add-rule" class="btn btn-default"><i class="fa fa-plus"></i> {{ button_add_rule }}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="rule-row-template" style="display:none;">
+  <div class="row rule-row" style="margin-bottom:10px;">
+    <div class="col-sm-3"><input type="number" name="rule_payment_number_from[]" class="form-control" placeholder="{{ entry_payment_from }}" /></div>
+    <div class="col-sm-3"><input type="number" name="rule_payment_number_to[]" class="form-control" placeholder="{{ entry_payment_to }}" /></div>
+    <div class="col-sm-2"><input type="number" name="rule_interval_value[]" value="1" class="form-control" placeholder="{{ entry_interval_value }}" /></div>
+    <div class="col-sm-3">
+      <select name="rule_interval_unit[]" class="form-control">
+        <option value="DAY">DAY</option>
+        <option value="WEEK">WEEK</option>
+        <option value="MONTH" selected="selected">MONTH</option>
+      </select>
+    </div>
+    <div class="col-sm-1"><button type="button" class="btn btn-danger remove-rule"><i class="fa fa-minus"></i></button></div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var container = document.getElementById('rules-container');
+    var template = document.getElementById('rule-row-template').innerHTML;
+
+    document.getElementById('add-rule').addEventListener('click', function () {
+      var wrapper = document.createElement('div');
+      wrapper.innerHTML = template;
+      container.appendChild(wrapper.firstElementChild);
+    });
+
+    container.addEventListener('click', function (e) {
+      if (e.target.closest('.remove-rule')) {
+        e.target.closest('.rule-row').remove();
+      }
+    });
+  })();
+</script>
+{{ footer }}

@@ -12,3 +12,5 @@ $_['text_transactions'] = 'Something went wrong :(';
 $_['text_preauth_success']     = 'Preauthorization success.';
 $_['text_completion_success']  = 'Payment successfully captured.';
 $_['error_a2a_non_uah']        = 'A2A payment is not available for non-UAH orders.';
+$_['error_subscription_guest_checkout'] = 'You must be logged in to subscribe to this product.';
+$_['error_subscription_mixed_cart'] = 'A subscription product cannot be combined with other items in the same order.';

@@ -1,0 +1,146 @@
+{{ header }}{{ column_left }}
+<div id="content">
+  <div class="page-header">
+    <div class="container-fluid">
+      <div class="pull-right">
+        <a href="{{ back }}" data-toggle="tooltip" title="{{ button_back }}" class="btn btn-default">
+          <i class="fa fa-reply"></i>
+        </a>
+      </div>
+      <h1>{{ heading_title }}</h1>
+      <ul class="breadcrumb">
+        {% for breadcrumb in breadcrumbs %}
+          <li><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="container-fluid">
+    {% if not subscription %}
+      <div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> {{ text_subscription_not_found }}</div>
+    {% else %}
+
+      {% if live_status_error %}
+        <div class="alert alert-warning"><i class="fa fa-exclamation-triangle"></i> {{ live_status_error }}</div>
+      {% endif %}
+
+      <div class="panel panel-default">
+        <div class="panel-heading"><h3 class="panel-title"><i class="fa fa-info-circle"></i> {{ text_subscription_info }}</h3></div>
+        <div class="panel-body">
+          <div class="row">
+            <div class="col-sm-6">
+              <div class="form-group"><label class="control-label">{{ column_order_id }}</label><p class="form-control-static">{{ subscription.order_id }}</p></div>
+              <div class="form-group"><label class="control-label">{{ text_plan_name }}</label><p class="form-control-static">{{ subscription.plan_name }}</p></div>
+              <div class="form-group"><label class="control-label">{{ column_status }}</label>
+                <p class="form-control-static">
+                  <span class="label {{ subscription.status == 'ACTIVE' ? 'label-success' : (subscription.status == 'ERROR' ? 'label-danger' : 'label-default') }}">{{ subscription.status }}</span>
+                  {% if subscription.amount_review_flag %}<span class="label label-warning">{{ text_amount_review_flag }}</span>{% endif %}
+                </p>
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="form-group"><label class="control-label">{{ column_provider_order_id }}</label><p class="form-control-static">{{ subscription.provider_order_id }}</p></div>
+              <div class="form-group"><label class="control-label">{{ text_merchant_request_id }}</label><p class="form-control-static">{{ subscription.merchant_request_id }}</p></div>
+              <div class="form-group"><label class="control-label">{{ column_created_at }}</label><p class="form-control-static">{{ subscription.created_at }}</p></div>
+            </div>
+          </div>
+
+          {% if not live_status_error and live_status is not empty %}
+            <hr />
+            <h4>{{ text_live_status }}</h4>
+            <pre>{{ live_status|json_encode }}</pre>
+          {% endif %}
+
+          <hr />
+          <h4>{{ text_rules_snapshot }}</h4>
+          <pre>{{ rules_snapshot_pretty }}</pre>
+
+          {% if cancel_url and subscription.status == 'ACTIVE' %}
+            <button type="button" id="btn-cancel-subscription" class="btn btn-danger"><i class="fa fa-ban"></i> {{ button_cancel }}</button>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="panel panel-default">
+        <div class="panel-heading"><h3 class="panel-title"><i class="fa fa-history"></i> {{ text_scheduled_payments }}</h3></div>
+        <div class="panel-body table-responsive">
+          <table class="table table-bordered table-hover">
+            <thead>
+              <tr>
+                <td>{{ column_payment_number }}</td>
+                <td>{{ column_status }}</td>
+                <td>{{ column_scheduled_date }}</td>
+                <td>{{ column_executed_at }}</td>
+                <td>{{ column_operation_id }}</td>
+                <td>{{ column_expected_amount }}</td>
+                <td>{{ column_actual_amount }}</td>
+                <td>{{ column_retry_count }}</td>
+                <td class="text-right">{{ column_action }}</td>
+              </tr>
+            </thead>
+            <tbody>
+              {% for scheduled_payment in scheduled_payments %}
+                <tr class="{{ scheduled_payment.amount_mismatch_flag ? 'warning' : '' }}">
+                  <td>{{ scheduled_payment.payment_number }}</td>
+                  <td>{{ scheduled_payment.status }}</td>
+                  <td>{{ scheduled_payment.scheduled_date }}</td>
+                  <td>{{ scheduled_payment.executed_at }}</td>
+                  <td>{{ scheduled_payment.operation_id }}</td>
+                  <td>{{ scheduled_payment.expected_coin_amount }}</td>
+                  <td>{{ scheduled_payment.actual_coin_amount }}{% if scheduled_payment.amount_mismatch_flag %} <i class="fa fa-exclamation-triangle text-warning" title="{{ text_amount_mismatch }}"></i>{% endif %}</td>
+                  <td>{{ scheduled_payment.retry_count }}</td>
+                  <td class="text-right">
+                    {% if scheduled_payment.status != 'SUCCESS' %}
+                      <button type="button" class="btn btn-sm btn-warning btn-run-now" data-url="{{ scheduled_payment.run_now_url }}" data-id="{{ scheduled_payment.scheduled_payment_row_id }}">
+                        <i class="fa fa-refresh"></i> {{ button_run_now }}
+                      </button>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% else %}
+                <tr><td class="text-center" colspan="9">{{ text_no_results }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+<script>
+  (function () {
+    document.querySelectorAll('.btn-run-now').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (!confirm('{{ text_confirm_run_now }}')) { return; }
+        btn.disabled = true;
+        var formData = new FormData();
+        formData.append('scheduled_payment_row_id', btn.getAttribute('data-id'));
+        fetch(btn.getAttribute('data-url'), { method: 'POST', body: formData })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            alert(data.message);
+            if (data.success) { location.reload(); }
+            btn.disabled = false;
+          })
+          .catch(function () { btn.disabled = false; });
+      });
+    });
+
+    var cancelBtn = document.getElementById('btn-cancel-subscription');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', function () {
+        if (!confirm('{{ text_confirm_cancel }}')) { return; }
+        cancelBtn.disabled = true;
+        fetch('{{ cancel_url|raw }}', { method: 'POST' })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            alert(data.message);
+            if (data.success) { location.reload(); }
+            cancelBtn.disabled = false;
+          })
+          .catch(function () { cancelBtn.disabled = false; });
+      });
+    }
+  })();
+</script>
+{{ footer }}

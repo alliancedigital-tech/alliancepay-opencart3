@@ -42,7 +42,29 @@ class ControllerExtensionPaymentAlliance extends Controller
     public function notifyCallback(): bool
     {
         $request = file_get_contents('php://input');
-        $request_data = json_decode($request, true);
+        $trimmed = trim($request);
+        $dotCount = substr_count($trimmed, '.');
+        $isToken = $trimmed !== '' && strpos($trimmed, ' ') === false;
+
+        if ($isToken && $dotCount === 2) {
+            try {
+                $request_data = $this->ecom->verifyJwsToken($trimmed);
+            } catch (\Throwable $e) {
+                $this->logger->error('JWS callback verification failed: ' . $e->getMessage());
+                $this->response->addHeader($this->request->server['SERVER_PROTOCOL'] . ' 400 Bad Request');
+
+                return false;
+            }
+        } else {
+            $request_data = json_decode($trimmed, true);
+        }
+
+        if (!is_array($request_data)) {
+            $this->response->addHeader($this->request->server['SERVER_PROTOCOL'] . ' 400 Bad Request');
+
+            return false;
+        }
+
         $this->logger->info('Callback request', $request_data);
         $alliance_order = $this->model_extension_payment_alliance->getAllianceOrder($request_data['hppOrderId']);
 
@@ -113,12 +135,7 @@ class ControllerExtensionPaymentAlliance extends Controller
                 throw new \RuntimeException($this->language->get('error_a2a_non_uah'));
             }
 
-            $jwe_token = $this->ecom->authorizeByVirtualDevice(
-                $this->config->get('payment_alliance_service_code_id')
-            );
-            $decrypt_auth = $this->ecom->decryptResponse($jwe_token);
             $data = $this->ecom->createCardHppOrder(
-                $decrypt_auth,
                 $order,
                 $this->config,
                 $this->url,

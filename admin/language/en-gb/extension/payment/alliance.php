@@ -25,7 +25,6 @@ $_["button_send"] = "Send";
 $_["button_continue"] = "Continue";
 
 //Alliance
-$_["alliance_service_code_id_api_key"] = "serviceCode:";
 $_["merchant_request_id_key"] = "merchantRequestId:";
 $_["merchant_id_key"] = "merchantId:";
 $_["fail_url_key"] = "fail_url:";
@@ -79,7 +78,7 @@ $_["log_error_install"] = "Alliance payment extension was not installed correctl
 // General Text
 $_['text_alliance_settings'] = 'Alliance payment module settings';
 $_['text_help_settings'] = 'Be sure to fill in all settings and check if everything is correct. Otherwise, the payment may not work correctly.';
-$_['text_help_jwt'] = 'Enter jwt keys. You need to select parameters "x", "y", "d" from the generated key file to decrypt the responses. If the keys are not filled or incorrect, the plugin will not work. If you have any questions, contact JSC "BANK ALLIANCE".';
+$_['text_help_jwt'] = 'Enter your JWS signing credentials: the RSA private key (PEM, PKCS#8) and the Key ID (kid) issued by JSC "BANK ALLIANCE". Every request to the bank is signed with these. If they are not filled or incorrect, the plugin will not work. If you have any questions, contact JSC "BANK ALLIANCE".';
 $_['text_payment_info'] = 'Payment Information';
 $_['text_message_type'] = 'Message Type:';
 $_['text_refund_status'] = 'Refund Status:';
@@ -96,10 +95,10 @@ $_['text_created_date'] = 'Created Date:';
 
 // Entries
 $_['entry_api_url'] = 'Alliance API URL';
-$_['entry_param_x'] = 'Parameter "x"';
-$_['entry_param_y'] = 'Parameter "y"';
-$_['entry_param_d'] = 'Parameter "d"';
+$_['entry_jws_private_key'] = 'JWS Private Key';
+$_['entry_jws_key_id'] = 'JWS Key ID';
 $_['entry_hpp_type'] = 'Hpp Type';
+$_['entry_hpp_payment_methods'] = 'Payment Methods';
 $_['entry_fail_url'] = 'Page to redirect the user in case of payment error';
 $_['entry_success_url'] = 'Page to redirect the user in case of successful payment';
 $_['entry_status'] = 'Payment module status';
@@ -110,7 +109,8 @@ $_['entry_refunded_status'] = '"Payment refunded" status';
 $_['entry_refund_fail_status'] = '"Refund error" status';
 
 // Helps
-$_['help_service_code'] = 'Get serviceCode from JSC "BANK ALLIANCE"';
+$_['help_jws_private_key'] = 'RSA private key in PEM format (PKCS#8) used to sign JWS requests (RS256). Keep secret.';
+$_['help_jws_key_id'] = 'Key ID (kid) registered with JSC "BANK ALLIANCE", identifies your signing key.';
 $_['help_merchant_id'] = 'Get merchantId from JSC "BANK ALLIANCE"';
 $_['help_fail_url'] = 'This page is standard according to your store settings, if there is a page you want to redirect the buyer to, please specify it. You must write the full path. Example - https://example.com/fail';
 $_['help_success_url'] = 'This page is standard according to your store settings, if there is a page you want to redirect the buyer to, please specify it. You must write the full path. Example - https://example.com/success';
@@ -122,6 +122,7 @@ $_['help_paid_status'] = 'Select the status that corresponds to this status in y
 $_['help_refunded_status'] = 'Select the status that corresponds to this status in your store. Example status - "Refunded"';
 $_['help_refund_fail_status'] = 'Select the status that corresponds to this status in your store. Example status - "Failed"';
 $_['help_hpp_type'] = 'Choose the HPP payment type from the two available PURCHASE or A2A.';
+$_['help_hpp_payment_methods'] = 'Payment methods offered on the Hosted Payment Page, for both one-time and subscription checkout.';
 
 $_['text_statuses'] = 'Order Statuses';
 $_['text_refund_history_comment'] = 'Refund through Alliance Payment';

@@ -107,8 +107,6 @@ class ModelExtensionPaymentData extends Model
         return [
             'payment_alliance_url' => $post['payment_alliance_url']
                 ?? $config->get('payment_alliance_url'),
-            'payment_alliance_service_code_id'=> $post['payment_alliance_service_code_id']
-                ?? $config->get('payment_alliance_service_code_id'),
             'payment_alliance_merchant_id' => $post['payment_alliance_merchant_id']
                 ?? $config->get('payment_alliance_merchant_id'),
             'payment_alliance_hpp_type' => $post['payment_alliance_hpp_type']
@@ -118,12 +116,12 @@ class ModelExtensionPaymentData extends Model
                 ?? $config->get('payment_alliance_preauth_exp_date'),
             'payment_alliance_status' => $post['payment_alliance_status']
                 ?? $config->get('payment_alliance_status'),
-            'payment_alliance_jwt_param_x' => $post['payment_alliance_jwt_param_x']
-                ?? $config->get('payment_alliance_jwt_param_x'),
-            'payment_alliance_jwt_param_y' => $post['payment_alliance_jwt_param_y']
-                ?? $config->get('payment_alliance_jwt_param_y'),
-            'payment_alliance_jwt_param_d' => $post['payment_alliance_jwt_param_d']
-                ?? $config->get('payment_alliance_jwt_param_d'),
+            'payment_alliance_jws_private_key' => $post['payment_alliance_jws_private_key']
+                ?? $config->get('payment_alliance_jws_private_key'),
+            'payment_alliance_jws_key_id' => $post['payment_alliance_jws_key_id']
+                ?? $config->get('payment_alliance_jws_key_id'),
+            'payment_alliance_hpp_payment_methods' => $post['payment_alliance_hpp_payment_methods']
+                ?? (json_decode((string)$config->get('payment_alliance_hpp_payment_methods'), true) ?: ['CARD']),
             'payment_alliance_fail_url' => $this->resolveUrl(
                 'payment_alliance_fail_url',
                 $catalog_url . 'index.php?route=checkout/failure',

@@ -7,28 +7,28 @@ declare(strict_types=1);
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
-use SimpleJWT\JWE;
+use SimpleJWT\JWT;
+use SimpleJWT\Keys\ECKey;
 use SimpleJWT\Keys\KeyFactory;
 use SimpleJWT\Keys\KeySet;
+use SimpleJWT\InvalidTokenException;
 
 /**
  * Class AllianceEcom.
  */
 class AllianceEcom
 {
-    const AUTHORIZE_VIRTUAL_DEVICE = 'api-gateway/authorize_virtual_device';
+    const CREATE_ORDER = 'ecom/jws/payments/hpp/create_order_v1';
 
-    const CREATE_ORDER = 'ecom/execute_request/hpp/v1/create-order';
+    const CREATE_REFUND = 'ecom/jws/payments/refund_v1';
 
-    const CREATE_REFUND = 'ecom/execute_request/payments/v3/refund';
+    const CHECK_OPERATIONS = 'ecom/jws/payments/hpp/operations_v1';
 
-    const CHECK_OPERATIONS = 'ecom/execute_request/hpp/v1/operations';
+    const COMPLETE_PAYMENT = 'ecom/jws/payments/preauth/completion_v1';
+
+    const GET_PUBLIC_KEY = 'ecom/keys/public_key/get_v1';
 
     const NOTIFICATION_URL_ROUTE = 'extension/payment/alliance/notifyCallback';
-
-    const ALGORITHM = 'ECDH-ES+A256KW';
-
-    const ENCRYPTION = 'A256GCM';
 
     const HPP_PAY_TYPE_PURCHASE = 'PURCHASE';
 
@@ -36,13 +36,35 @@ class AllianceEcom
 
     const HPP_PAY_TYPE_PREAUTH = 'PREAUTH';
 
-    const COMPLETE_PAYMENT = 'ecom/execute_request/payments/v1/completion';
-
     const A2A_DIRECT_TYPE = 'BANK_LINK';
 
     const A2A_PRIORITY_BANK_CODE = 'ALL_BANKS';
 
     const A2A_OPERATION_TYPE = 'ACCOUNT_2_ACCOUNT';
+
+    const BANK_PUBLIC_KEY_CACHE_TTL = 3600;
+
+    const PLAN_CREATE = 'ecom/jws/scheduled_payments/plan/create_v1';
+
+    const PLAN_UPDATE = 'ecom/jws/scheduled_payments/plan/update_v1';
+
+    const PLAN_STATUS_UPDATE = 'ecom/jws/scheduled_payments/plan/status_update_v1';
+
+    const PLAN_VERSION_UPDATE = 'ecom/jws/scheduled_payments/plan/version/update_v1';
+
+    const PLAN_VERSION_DELETE = 'ecom/jws/scheduled_payments/version/delete_v1';
+
+    const SUBSCRIPTION_ORDER_CREATE = 'ecom/jws/scheduled_payments/subscription-orders/create_v1';
+
+    const SUBSCRIPTION_ORDER_CANCEL = 'ecom/jws/scheduled_payments/subscription-orders/cancel_v1';
+
+    const SUBSCRIPTION_PAYMENT_RECURRING = 'ecom/jws/scheduled_payments/payments/recurring_subscription_v1';
+
+    const NOTIFICATION_URL_ROUTE_SUBSCRIPTION = 'extension/payment/alliance_subscription/notifyCallback';
+
+    const SUBSCRIPTION_STATUS_PAGE_TYPE = 'STATUS_TIMER_PAGE';
+
+    const SUBSCRIPTION_CONTENT_TYPE = 'application/jwt';
 
     private $dateTime;
 
@@ -51,6 +73,8 @@ class AllianceEcom
     private $config;
 
     private $logger;
+
+    private $cache;
 
     private $validationRules = [
         'senderCustomerId' => [
@@ -132,6 +156,7 @@ class AllianceEcom
         $loader->library('AllianceGuzzleFacade');
         $loader->library('AllianceCountryCodeProvider');
         $loader->library('AllianceConfig');
+        $loader->library('AllianceRequestIdentification');
 
         $autoloadPaths = [
             DIR_SYSTEM . 'library/alliancepay/vendor/autoload.php',
@@ -157,96 +182,163 @@ class AllianceEcom
         $this->logger = new AllianceLogger($registry);
         $this->dateTime = new AllianceDatetime();
         $this->countryCodeProvider = new AllianceCountryCodeProvider();
+        $this->cache = $registry->get('cache');
         $clientFacade = $registry->get('AllianceGuzzleFacade');
         $clientFacade->init($this->config->get('payment_alliance_url'));
         $this->client = $clientFacade;
     }
 
     /**
-     * @param string $payment_alliance_service_code_id
-     * @return mixed
+     * @param string $endpoint
+     * @param array $body
+     * @return string
+     * @throws Throwable
      */
-    public function authorizeByVirtualDevice(string $payment_alliance_service_code_id)
+    private function signJwsRequest(string $endpoint, array $body): string
     {
+        $privateKeyPem = $this->config->get('payment_alliance_jws_private_key');
+        $kid = $this->config->get('payment_alliance_jws_key_id');
+
+        if (empty($privateKeyPem)) {
+            throw new \RuntimeException('JWS Private Key is not configured.');
+        }
+
+        if (empty($kid)) {
+            throw new \RuntimeException('JWS Key ID is not configured.');
+        }
+
         try {
-            $response = $this->client->request(self::AUTHORIZE_VIRTUAL_DEVICE, [
-                'headers' => $this->getHeaders(),
-                'json' => [
-                    'serviceCode' => $payment_alliance_service_code_id,
-                ]
-            ]);
+            $key = KeyFactory::create($privateKeyPem, 'pem');
+            $key->setKeyId($kid);
+            $keySet = new KeySet();
+            $keySet->add($key);
+
+            $jwt = new JWT(
+                [
+                    'alg' => 'RS256',
+                    'ts' => (string)(int)(microtime(true) * 1000),
+                    'targetUrl' => '/' . ltrim($endpoint, '/'),
+                    'kid' => $kid,
+                    'jti' => AllianceRequestIdentification::generateRequestId(),
+                ],
+                $body
+            );
+
+            return $jwt->encode($keySet, null, false);
         } catch (Throwable $e) {
-            $this->logger->log(AllianceLogger::ERROR, 'authorize error: ' . $e->getMessage());
+            $this->logger->log(AllianceLogger::ERROR, 'JWS signing failed: ' . $e->getMessage());
             throw $e;
         }
-
-        $contents = $response->getBody()->getContents();
-        $contents = json_decode($contents, true);
-
-        if (!isset($contents['jwe'])) {
-            $this->logger->log(AllianceLogger::ERROR, 'No token received from authorize endpoint.');
-        }
-
-        return $contents['jwe'];
     }
 
     /**
-     * @param string $jwe_token
      * @return array
      */
-    public function decryptResponse(string $jwe_token)
+    private function getJwsRequestHeaders(): array
     {
-        $set = new KeySet();
-        $keyFactory = new KeyFactory();
-
-        $json = [
-            "kty" => "EC",
-            "d" => $this->config->get("payment_alliance_jwt_param_d"),
-            "use" => "enc",
-            "crv" => "P-384",
-            "x" => $this->config->get("payment_alliance_jwt_param_x"),
-            "y" => $this->config->get("payment_alliance_jwt_param_y"),
-            "alg" => self::ALGORITHM,
+        return [
+            'Content-Type' => 'application/jws',
+            'Accept' => 'application/json',
+            'x-api_version' => 'v1',
+            'x-request_id' => AllianceRequestIdentification::generateRequestId(),
         ];
+    }
 
-        $keys = $keyFactory->create($json, null, null, self::ALGORITHM);
-        $set->add($keys);
-
-        $jwe_decrypted = JWE::decrypt($jwe_token, $set, self::ALGORITHM);
-
-        return (array)json_decode($jwe_decrypted->getPlaintext());
+    private function getJwsSubscriptionRequestHeaders(): array
+    {
+        return [
+            'Content-Type' => self::SUBSCRIPTION_CONTENT_TYPE,
+            'Accept' => 'application/json',
+            'x-request_id' => AllianceRequestIdentification::generateRequestId(),
+        ];
     }
 
     /**
-     * @param array $publicServerKey
-     * @param string $payload
-     * @return string
-     * @throws Exception
+     * @param string $jws
+     * @return array
      */
-    public function encryptRequest(array $publicServerKey, string $payload)
+    public function verifyJwsToken(string $jws): array
     {
-        $headers = [
-            'alg' => self::ALGORITHM,
-            'enc' => self::ENCRYPTION
-        ];
-
-        $key = KeyFactory::create($publicServerKey, null, null, self::ALGORITHM);
-        $keySet = new KeySet();
-        $keySet->add($key);
-        $jwe = new JWE($headers, $payload);
-
         try {
-            $token = $jwe->encrypt($keySet);
-        } catch (Exception $e) {
-            $this->logger->log(AllianceLogger::ERROR, 'Can not encrypt JWE: ' . $e->getMessage());
-            throw $e;
+            $deserialised = JWT::deserialise($jws);
+            $headers = $deserialised['signatures'][0]['headers'];
+            $kid = $headers['kid'] ?? null;
+            $alg = $headers['alg'] ?? null;
+        } catch (Throwable $e) {
+            throw new \RuntimeException('JWS parse error: ' . $e->getMessage());
         }
 
-        return $token;
+        if (empty($kid) || empty($alg)) {
+            throw new \RuntimeException('JWS: missing kid or alg in header.');
+        }
+
+        $jwk = $this->fetchBankPublicKey($kid);
+
+        $key = new ECKey($jwk, 'php');
+        $key->setKeyId($kid);
+        $keySet = new KeySet();
+        $keySet->add($key);
+
+        try {
+            $jwt = JWT::decode($jws, $keySet, $alg);
+        } catch (InvalidTokenException $e) {
+            throw new \RuntimeException('JWS verification failed: ' . $e->getMessage());
+        }
+
+        return $jwt->getClaims();
     }
 
     /**
-     * @param array $decrypt_auth
+     * @param string $kid
+     * @return array
+     */
+    private function fetchBankPublicKey(string $kid): array
+    {
+        $cacheKey = 'alb_bank_pubkey_' . md5($kid);
+        $cached = $this->cache ? $this->cache->get($cacheKey) : null;
+
+        if ($cached) {
+            return json_decode($cached, true);
+        }
+
+        $response = $this->client->request(self::GET_PUBLIC_KEY, [
+            'headers' => [
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+            ],
+            'json' => ['kid' => $kid],
+        ]);
+        $jwk = json_decode($response->getBody()->getContents(), true);
+
+        if (empty($jwk['kty']) || empty($jwk['crv']) || empty($jwk['x']) || empty($jwk['y'])) {
+            throw new \RuntimeException('Invalid public key response from bank for kid=' . $kid);
+        }
+
+        if ($this->cache) {
+            $this->cache->set($cacheKey, json_encode($jwk), self::BANK_PUBLIC_KEY_CACHE_TTL);
+        }
+
+        return $jwk;
+    }
+
+    /**
+     * @param $response
+     * @return array
+     */
+    private function parseResponse($response): array
+    {
+        $body = trim($response->getBody()->getContents());
+        $dotCount = substr_count($body, '.');
+        $isToken = $body !== '' && strpos($body, ' ') === false;
+
+        if ($isToken && $dotCount === 2) {
+            return $this->verifyJwsToken($body);
+        }
+
+        return json_decode($body, true) ?? [];
+    }
+
+    /**
      * @param array $orderInfo
      * @param object $config
      * @param $url
@@ -254,59 +346,41 @@ class AllianceEcom
      * @return mixed
      * @throws Throwable
      */
-    public function createCardHppOrder(array $decrypt_auth, array $orderInfo, object $config, $url, $total_price)
+    public function createCardHppOrder(array $orderInfo, object $config, $url, $total_price)
     {
         try {
             $notificationUrl = $this->getNotificationUrl($url);
+            $body = $this->collectPaymentData($orderInfo, $config, $notificationUrl, $total_price);
             $response = $this->client->request(self::CREATE_ORDER, [
-                'headers' => $this->getHeaders($decrypt_auth),
-                'json' => $this->collectPaymentData($orderInfo, $config, $notificationUrl, $total_price),
+                'headers' => $this->getJwsRequestHeaders(),
+                'body' => $this->signJwsRequest(self::CREATE_ORDER, $body),
             ]);
         } catch (Throwable $e) {
             $this->logger->log(AllianceLogger::ERROR, 'Can\'t create order: ' . $e->getMessage());
             throw $e;
         }
 
-        $contents = $response->getBody()->getContents();
-
-        return json_decode($contents, true);
+        return $this->parseResponse($response);
     }
 
     /**
-     * @param array $decrypt_auth
      * @param $url
      * @param $callBackData
      * @return mixed
      * @throws Exception
      */
-    public function proceedRefund(array $decrypt_auth, $url, $callBackData)
+    public function proceedRefund($url, $callBackData)
     {
         $refundResult = [];
         try {
             $notificationUrl = $this->getNotificationUrl($url);
-            $serverPublicKey = json_decode(json_encode($this->getServerPublicKey($decrypt_auth)), true);
-            $headers = $this->getHeaders($decrypt_auth, 'text/plain');
+            $body = $this->collectRefundData($notificationUrl, $callBackData);
+            $response = $this->client->request(self::CREATE_REFUND, [
+                'headers' => $this->getJwsRequestHeaders(),
+                'body' => $this->signJwsRequest(self::CREATE_REFUND, $body),
+            ]);
 
-            if (!empty($serverPublicKey)) {
-                $payload = json_encode($this->collectRefundData(
-                    $notificationUrl,
-                    $callBackData
-                ), JSON_PRETTY_PRINT);
-                $refundEncryptBody = $this->encryptRequest(
-                    $serverPublicKey,
-                    $payload
-                );
-                $response = $this->client->request(self::CREATE_REFUND, [
-                    'headers' => $headers,
-                    'body' => $refundEncryptBody,
-                ]);
-
-                $contents = json_decode($response->getBody()->getContents(), true);
-
-                if (isset($contents['jwe'])) {
-                    $refundResult = $this->decryptResponse($contents['jwe']);
-                }
-            }
+            $refundResult = $this->parseResponse($response);
         } catch (Throwable $e) {
             $this->logger->log(AllianceLogger::ERROR, 'Can\'t proceed refund: ' . $e->getMessage());
             throw new \RuntimeException('Cannot process refund. Check alliance.log for details.');
@@ -316,27 +390,23 @@ class AllianceEcom
     }
 
     /**
-     * @param array $decrypt_auth
      * @param string $hpp_order_id
      * @return array|mixed
      */
-    public function checkOperationStatus(array $decrypt_auth, string $hpp_order_id)
+    public function checkOperationStatus(string $hpp_order_id)
     {
         try {
+            $body = ['hppOrderId' => $hpp_order_id];
             $response = $this->client->request(self::CHECK_OPERATIONS, [
-                'headers' => $this->getHeaders($decrypt_auth),
-                'json' => [
-                    'hppOrderId' => $hpp_order_id,
-                ]
+                'headers' => $this->getJwsRequestHeaders(),
+                'body' => $this->signJwsRequest(self::CHECK_OPERATIONS, $body),
             ]);
         } catch (Throwable $e) {
             $this->logger->log(AllianceLogger::ERROR, 'Check operation error: ' . $e->getMessage());
         }
 
         if (isset($response)) {
-            $contents = $response->getBody()->getContents();
-
-            return json_decode($contents, true) ?? [];
+            return $this->parseResponse($response);
         }
 
         return [];
@@ -376,6 +446,8 @@ class AllianceEcom
             $customerData['senderCustomerId'] = 'not_authorized_' . uniqid();
         }
 
+        $hppMethods = json_decode((string)$config->get('payment_alliance_hpp_payment_methods'), true);
+
         $paymentData = [
             'merchantId' => $config->get('payment_alliance_merchant_id'),
             'hppPayType' => $config->get('payment_alliance_hpp_type') ?? self::HPP_PAY_TYPE_PURCHASE,
@@ -383,7 +455,7 @@ class AllianceEcom
             'successUrl' => $config->get('payment_alliance_success_url'),
             'merchantRequestId' => uniqid(),
             'statusPageType' => 'STATUS_TIMER_PAGE',
-            'paymentMethods' => ['CARD', 'APPLE_PAY', 'GOOGLE_PAY'],
+            'paymentMethods' => (is_array($hppMethods) && $hppMethods) ? $hppMethods : ['CARD'],
             'customerData' => $this->validateCustomerData($customerData, $this->validationRules),
             'coinAmount' => (int)($total_price * 100),
             'notificationUrl' => $url
@@ -422,13 +494,12 @@ class AllianceEcom
     }
 
     /**
-     * @param array $decrypt_auth
      * @param array $allianceOrder
      * @param $url
      * @return bool
      * @throws Throwable
      */
-    public function executeCompletion(array $decrypt_auth, array $allianceOrder, $url): bool
+    public function executeCompletion(array $allianceOrder, $url): bool
     {
         $notificationUrl = $this->getNotificationUrl($url);
         $body = [
@@ -441,24 +512,12 @@ class AllianceEcom
         ];
 
         try {
-            $serverPublicKey = json_decode(
-                json_encode($this->getServerPublicKey($decrypt_auth)),
-                true
-            );
-            $completionEncryptBody = $this->encryptRequest(
-                $serverPublicKey,
-                json_encode($body, JSON_PRETTY_PRINT)
-            );
             $response = $this->client->request(self::COMPLETE_PAYMENT, [
-                'headers' => $this->getHeaders($decrypt_auth),
-                'body' => $completionEncryptBody
+                'headers' => $this->getJwsRequestHeaders(),
+                'body' => $this->signJwsRequest(self::COMPLETE_PAYMENT, $body),
             ]);
 
-            $contents = json_decode($response->getBody()->getContents(), true);
-
-            if (isset($contents['jwe'])) {
-                $completionResult = $this->decryptResponse($contents['jwe']);
-            }
+            $completionResult = $this->parseResponse($response);
         } catch (Throwable $e) {
             $this->logger->log(AllianceLogger::ERROR, 'Can\'t execute completion: ' . $e->getMessage());
             throw $e;
@@ -512,43 +571,208 @@ class AllianceEcom
     }
 
     /**
-     * @param array $decrypt_auth
-     * @param $contentType
-     * @return array
-     */
-    private function getHeaders(array $decrypt_auth = [], $contentType = 'application/json')
-    {
-        $headers['Content-Type'] = $contentType;
-        $headers['x-api_version'] = 'v1';
-        $headers['x-request_id'] = uniqid();
-
-        if ($decrypt_auth) {
-            $headers['x-device_id'] = $decrypt_auth['deviceId'];
-        }
-
-        if ($decrypt_auth) {
-            $headers['x-refresh_token'] = $decrypt_auth['refreshToken'];
-        }
-
-        return $headers;
-    }
-
-    /**
      * @param Url $url
-     * @return string
+     * @param string $route Never hardcode the webhook path - always build it via this route builder.
      */
-    private function getNotificationUrl(Url $url)
+    private function getNotificationUrl(Url $url, string $route = self::NOTIFICATION_URL_ROUTE)
     {
-        return $url->link(self::NOTIFICATION_URL_ROUTE);
+        return $url->link($route);
     }
 
     /**
-     * @param array $decrypt_auth
-     * @return mixed|null
+     * @param array $planData
      */
-    private function getServerPublicKey(array $decrypt_auth = [])
+    public function createSubscriptionPlan(array $planData): array
     {
-        return $decrypt_auth['serverPublic'] ?? null;
+        try {
+            $response = $this->client->request(self::PLAN_CREATE, [
+                'headers' => $this->getJwsSubscriptionRequestHeaders(),
+                'body' => $this->signJwsRequest(self::PLAN_CREATE, $planData),
+            ]);
+        } catch (Throwable $e) {
+            $this->logger->log(AllianceLogger::ERROR, 'Can\'t create subscription plan: ' . $e->getMessage());
+            throw $e;
+        }
+
+        return $this->parseResponse($response);
+    }
+
+    /**
+     * @param string $planId
+     * @param string $versionId
+     */
+    public function setInfiniteSchedule(string $planId, string $versionId): array
+    {
+        $body = [
+            'planId' => $planId,
+            'versionId' => $versionId,
+            'infiniteVersion' => true,
+        ];
+
+        try {
+            $response = $this->client->request(self::PLAN_VERSION_UPDATE, [
+                'headers' => $this->getJwsSubscriptionRequestHeaders(),
+                'body' => $this->signJwsRequest(self::PLAN_VERSION_UPDATE, $body),
+            ]);
+        } catch (Throwable $e) {
+            $this->logger->log(AllianceLogger::ERROR, 'Can\'t set infinite schedule: ' . $e->getMessage());
+            throw $e;
+        }
+
+        return $this->parseResponse($response);
+    }
+
+    /**
+     * @param array $planData
+     */
+    public function updateSubscriptionPlan(array $planData): array
+    {
+        try {
+            $response = $this->client->request(self::PLAN_UPDATE, [
+                'headers' => $this->getJwsSubscriptionRequestHeaders(),
+                'body' => $this->signJwsRequest(self::PLAN_UPDATE, $planData),
+            ]);
+        } catch (Throwable $e) {
+            $this->logger->log(AllianceLogger::ERROR, 'Can\'t update subscription plan: ' . $e->getMessage());
+            throw $e;
+        }
+
+        return $this->parseResponse($response);
+    }
+
+    /**
+     * @param string $planId
+     * @param string $status
+     */
+    public function updatePlanStatus(string $planId, string $status): array
+    {
+        $body = [
+            'planId' => $planId,
+            'status' => $status,
+        ];
+
+        try {
+            $response = $this->client->request(self::PLAN_STATUS_UPDATE, [
+                'headers' => $this->getJwsSubscriptionRequestHeaders(),
+                'body' => $this->signJwsRequest(self::PLAN_STATUS_UPDATE, $body),
+            ]);
+        } catch (Throwable $e) {
+            $this->logger->log(AllianceLogger::ERROR, 'Can\'t update plan status: ' . $e->getMessage());
+            throw $e;
+        }
+
+        return $this->parseResponse($response);
+    }
+
+    /**
+     * @param string $planId
+     * @param string $versionId
+     */
+    public function deletePlanVersion(string $planId, string $versionId): array
+    {
+        $body = [
+            'planId' => $planId,
+            'versionId' => $versionId,
+        ];
+
+        try {
+            $response = $this->client->request(self::PLAN_VERSION_DELETE, [
+                'headers' => $this->getJwsSubscriptionRequestHeaders(),
+                'body' => $this->signJwsRequest(self::PLAN_VERSION_DELETE, $body),
+            ]);
+        } catch (Throwable $e) {
+            $this->logger->log(AllianceLogger::ERROR, 'Can\'t delete plan version: ' . $e->getMessage());
+            throw $e;
+        }
+
+        return $this->parseResponse($response);
+    }
+
+    /**
+     * @param array $body
+     */
+    public function createSubscriptionOrder(array $body): array
+    {
+        try {
+            $response = $this->client->request(self::SUBSCRIPTION_ORDER_CREATE, [
+                'headers' => $this->getJwsSubscriptionRequestHeaders(),
+                'body' => $this->signJwsRequest(self::SUBSCRIPTION_ORDER_CREATE, $body),
+            ]);
+        } catch (Throwable $e) {
+            $this->logger->log(AllianceLogger::ERROR, 'Can\'t create subscription order: ' . $e->getMessage());
+            throw $e;
+        }
+
+        return $this->parseResponse($response);
+    }
+
+    /**
+     * @param string $hppOrderId
+     * @param string $merchantId
+     * @param string $reason
+     */
+    public function cancelSubscriptionOrder(string $hppOrderId, string $merchantId, string $reason = ''): array
+    {
+        $body = [
+            'hppOrderId' => $hppOrderId,
+            'merchantId' => $merchantId,
+        ];
+
+        if ($reason !== '') {
+            $body['reason'] = $reason;
+        }
+
+        try {
+            $response = $this->client->request(self::SUBSCRIPTION_ORDER_CANCEL, [
+                'headers' => $this->getJwsSubscriptionRequestHeaders(),
+                'body' => $this->signJwsRequest(self::SUBSCRIPTION_ORDER_CANCEL, $body),
+            ]);
+        } catch (Throwable $e) {
+            $this->logger->log(AllianceLogger::ERROR, 'Can\'t cancel subscription order: ' . $e->getMessage());
+            throw $e;
+        }
+
+        return $this->parseResponse($response);
+    }
+
+    /**
+     * @param string $hppOrderId
+     * @param string $scheduledPaymentId
+     * @param string $merchantId
+     */
+    public function triggerRecurringPayment(string $hppOrderId, string $scheduledPaymentId, string $merchantId): array
+    {
+        $body = [
+            'hppOrderId' => $hppOrderId,
+            'scheduledPaymentId' => $scheduledPaymentId,
+            'merchantId' => $merchantId,
+        ];
+
+        try {
+            $response = $this->client->request(self::SUBSCRIPTION_PAYMENT_RECURRING, [
+                'headers' => $this->getJwsSubscriptionRequestHeaders(),
+                'body' => $this->signJwsRequest(self::SUBSCRIPTION_PAYMENT_RECURRING, $body),
+            ]);
+        } catch (Throwable $e) {
+            $this->logger->log(AllianceLogger::ERROR, 'Can\'t trigger recurring payment: ' . $e->getMessage());
+            throw $e;
+        }
+
+        return $this->parseResponse($response);
+    }
+
+    /**
+     * @param string $hppOrderId
+     */
+    public function checkSubscriptionOperationStatus(string $hppOrderId): array
+    {
+        $this->logger->log(
+            AllianceLogger::WARNING,
+            'Reusing hpp/operations_v1 for subscription order ' . $hppOrderId . ' - no dedicated '
+            . 'scheduled_payments status endpoint documented in spec §10.2; confirm with bank.'
+        );
+
+        return $this->checkOperationStatus($hppOrderId);
     }
 
     /**

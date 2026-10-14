@@ -19,6 +19,11 @@ class ModelExtensionPaymentAlliance extends Model
         $this->load->language('extension/payment/alliance');
         $this->load->library('AllianceConfig');
 
+        $this->load->library('AllianceSubscriptionEligibility');
+        if (AllianceSubscriptionEligibility::resolveCartSubscriptionPlan($this->cart->getProducts(), $this->registry)) {
+            return [];
+        }
+
         $option_data['alliance'] = [
             'code' => AllianceConfig::ALLIANCE_PAYMENT_CODE,
             'title' => $this->language->get('text_title'),

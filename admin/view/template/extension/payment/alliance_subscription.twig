@@ -1,0 +1,109 @@
+{{ header }}{{ column_left }}
+<div id="content">
+  <div class="page-header">
+    <div class="container-fluid">
+      <div class="pull-right">
+        <button type="submit" form="form-alliance-subscription" data-toggle="tooltip" title="{{ button_save }}" class="btn btn-primary">
+          <i class="fa fa-save"></i>
+        </button>
+        <a href="{{ back }}" data-toggle="tooltip" title="{{ button_back }}" class="btn btn-default">
+          <i class="fa fa-reply"></i>
+        </a>
+      </div>
+      <h1>{{ heading_title }}</h1>
+      <ul class="breadcrumb">
+        {% for breadcrumb in breadcrumbs %}
+          <li><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="container-fluid">
+    {% if warning %}
+      <div class="alert alert-danger alert-dismissible" role="alert">
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <i class="fa fa-exclamation-circle"></i> {{ warning }}
+      </div>
+    {% endif %}
+    {% if success %}
+      <div class="alert alert-success alert-dismissible" role="alert">
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <i class="fa fa-check-circle"></i> {{ success }}
+      </div>
+    {% endif %}
+
+    <div class="row">
+      <div class="col-sm-3">
+        <div class="panel panel-default text-center">
+          <div class="panel-body">
+            <h2>{{ counts.active_plans }}</h2>
+            <p>{{ text_active_plans }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-3">
+        <div class="panel panel-default text-center">
+          <div class="panel-body">
+            <h2>{{ counts.active_subscriptions }}</h2>
+            <p>{{ text_active_subscriptions }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-3">
+        <div class="panel panel-default text-center">
+          <div class="panel-body">
+            <h2 class="{{ counts.error_plans > 0 ? 'text-danger' : '' }}">{{ counts.error_plans }}</h2>
+            <p>{{ text_error_plans }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-3">
+        <div class="panel panel-default text-center">
+          <div class="panel-body">
+            <h2 class="{{ counts.archive_candidates > 0 ? 'text-warning' : '' }}">{{ counts.archive_candidates }}</h2>
+            <p>{{ text_archive_candidates }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel panel-default">
+      <div class="panel-heading"><h3 class="panel-title"><i class="fa fa-list"></i> {{ text_manage }}</h3></div>
+      <div class="panel-body">
+        <a href="{{ links.plan_template }}" class="btn btn-default"><i class="fa fa-sitemap"></i> {{ text_plan_templates }}</a>
+        <a href="{{ links.plan }}" class="btn btn-default"><i class="fa fa-credit-card"></i> {{ text_plans }}</a>
+        <a href="{{ links.subscription }}" class="btn btn-default"><i class="fa fa-users"></i> {{ text_subscriptions }}</a>
+      </div>
+    </div>
+
+    <div class="panel panel-default">
+      <div class="panel-heading"><h3 class="panel-title"><i class="fa fa-pencil"></i> {{ text_settings }}</h3></div>
+      <div class="panel-body">
+        <form id="form-alliance-subscription" class="form-horizontal" action="{{ action }}" method="post">
+          <input type="hidden" name="action" value="save" />
+
+          <div class="form-group">
+            <label class="col-sm-2 control-label">{{ entry_status }}</label>
+            <div class="col-sm-10">
+              <select name="payment_alliance_subscription_status" class="form-control">
+                <option value="1" {{ payment_alliance_subscription_status ? 'selected="selected"' : '' }}>{{ text_enabled }}</option>
+                <option value="0" {{ not payment_alliance_subscription_status ? 'selected="selected"' : '' }}>{{ text_disabled }}</option>
+              </select>
+              <p class="help-block">{{ help_status }}</p>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="col-sm-2 control-label" for="payment_alliance_subscription_notification_encryption">{{ entry_notification_encryption }}</label>
+            <div class="col-sm-10">
+              <input type="text" name="payment_alliance_subscription_notification_encryption" id="payment_alliance_subscription_notification_encryption"
+                value="{{ payment_alliance_subscription_notification_encryption }}" class="form-control" />
+              <p class="help-block">{{ help_notification_encryption }}</p>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{{ footer }}

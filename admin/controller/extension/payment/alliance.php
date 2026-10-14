@@ -10,7 +10,7 @@ declare(strict_types=1);
  */
 class ControllerExtensionPaymentAlliance extends Controller
 {
-    public $version = '1.6.0';
+    public $version = '1.7.0';
     private $events = [
         [
             'trigger'    => 'admin/view/sale/order_info/after',
@@ -87,6 +87,10 @@ class ControllerExtensionPaymentAlliance extends Controller
                 }
             }
 
+            $post['payment_alliance_hpp_payment_methods'] = json_encode(
+                $post['payment_alliance_hpp_payment_methods'] ?? ['CARD']
+            );
+
             $this->model_setting_setting->editSetting('payment_alliance', $post);
 
             $this->session->data['success'] = $this->language->get(
@@ -132,6 +136,7 @@ class ControllerExtensionPaymentAlliance extends Controller
             'payment_alliance_fail_url' => $catalog_url . 'index.php?route=checkout/failure',
             'payment_alliance_debug' => '0',
             'payment_alliance_version' => '0.0.2',
+            'payment_alliance_hpp_payment_methods' => json_encode(['CARD', 'APPLE_PAY', 'GOOGLE_PAY']),
         ];
 
         $permissions = [
@@ -215,6 +220,13 @@ class ControllerExtensionPaymentAlliance extends Controller
         $this->model_extension_payment_db->updateAllianceOrderTable();
         $this->load->model('setting/setting');
         $this->model_setting_setting->editSetting('payment_alliance', ['payment_alliance_version' => '1.0.0']);
+
+        if (empty($this->config->get('payment_alliance_hpp_payment_methods'))) {
+            $legacy = $this->config->get('payment_alliance_subscription_hpp_payment_methods');
+            $this->model_setting_setting->editSetting('payment_alliance', [
+                'payment_alliance_hpp_payment_methods' => $legacy ?: json_encode(['CARD', 'APPLE_PAY', 'GOOGLE_PAY']),
+            ]);
+        }
     }
 
     /**
@@ -368,10 +380,7 @@ class ControllerExtensionPaymentAlliance extends Controller
 
         try {
             $ecom = new AllianceEcom($this->registry);
-            $jwe_token = $ecom->authorizeByVirtualDevice($this->config->get('payment_alliance_service_code_id'));
-            $decrypt_auth = $ecom->decryptResponse($jwe_token);
-
-            $e_com_response = $ecom->checkOperationStatus($decrypt_auth, $alliance_order['hpp_order_id']);
+            $e_com_response = $ecom->checkOperationStatus($alliance_order['hpp_order_id']);
         } catch (\Exception $exception) {
             $json['msgType'] = $this->language->get('text_technical_error');
             $this->response->setOutput(
@@ -491,13 +500,8 @@ class ControllerExtensionPaymentAlliance extends Controller
         try {
             $this->load->library('AllianceEcom');
             $ecom = new AllianceEcom($this->registry);
-            $jwe_token = $ecom->authorizeByVirtualDevice(
-                $this->config->get('payment_alliance_service_code_id')
-            );
-            $decrypt_auth = $ecom->decryptResponse($jwe_token);
             $alliance_order['coin_amount'] = $coin_amount_uah;
             $completionResult = $ecom->executeCompletion(
-                $decrypt_auth,
                 $alliance_order,
                 $this->url
             );

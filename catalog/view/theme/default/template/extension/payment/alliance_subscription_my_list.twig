@@ -1,0 +1,76 @@
+{{ header }}
+<div class="container">
+  <ul class="breadcrumb">
+    {% for breadcrumb in breadcrumbs %}
+      <li><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
+    {% endfor %}
+  </ul>
+  <div class="row">
+    {{ column_left }}
+    <div id="content" class="col">
+      <h1>{{ heading_title }}</h1>
+
+      {% if subscriptions %}
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <td>{{ text_column_plan }}</td>
+              <td>{{ text_column_product }}</td>
+              <td>{{ text_column_status }}</td>
+              <td>{{ text_column_date }}</td>
+              <td></td>
+            </tr>
+          </thead>
+          <tbody>
+            {% for subscription in subscriptions %}
+              <tr>
+                <td>{{ subscription.plan_name }}</td>
+                <td>{{ subscription.product_name }}</td>
+                <td>{{ subscription.status }}</td>
+                <td>{{ subscription.created_at }}</td>
+                <td class="text-end">
+                  {% if subscription.can_cancel %}
+                    <button type="button" class="btn btn-danger btn-sm alliance-subscription-cancel" data-subscription-id="{{ subscription.subscription_id }}">
+                      {{ button_cancel }}
+                    </button>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p>{{ text_no_subscriptions }}</p>
+      {% endif %}
+
+      <div class="text-end">
+        <a href="{{ continue }}" class="btn btn-primary">{{ button_continue }}</a>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.alliance-subscription-cancel').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            if (!confirm('{{ text_confirm_cancel }}')) {
+                return;
+            }
+
+            fetch('{{ cancel_action|raw }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest'},
+                body: 'subscription_id=' + encodeURIComponent(btn.getAttribute('data-subscription-id'))
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (json) {
+                alert(json.message);
+                if (json.success) {
+                    location.reload();
+                }
+            });
+        });
+    });
+});
+</script>
+{{ footer }}

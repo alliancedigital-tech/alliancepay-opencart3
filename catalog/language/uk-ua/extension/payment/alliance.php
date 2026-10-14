@@ -12,3 +12,5 @@ $_['text_payment_something_wrong'] = "Щось пішло не так :(";
 $_['text_preauth_success']     = 'Преавторизація успішна';
 $_['text_completion_success']  = 'Оплату успішно підтверджено.';
 $_['error_a2a_non_uah']        = 'Оплата A2A недоступна для замовлень не в гривні.';
+$_['error_subscription_guest_checkout'] = 'Щоб оформити підписку на цей товар, потрібно увійти в обліковий запис.';
+$_['error_subscription_mixed_cart'] = 'Товар з підпискою не можна додати в кошик разом з іншими товарами.';

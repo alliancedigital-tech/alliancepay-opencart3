@@ -48,12 +48,7 @@ class ModelExtensionPaymentRefund extends Model
 
             try {
                 if (empty($allianceOrderCallBack)) {
-                    $jwe_token = $this->ecom->authorizeByVirtualDevice(
-                        $this->config->get('payment_alliance_service_code_id')
-                    );
-                    $decrypt_auth = $this->ecom->decryptResponse($jwe_token);
                     $eComResponse = $this->ecom->checkOperationStatus(
-                        $decrypt_auth,
                         $allianceOrder['hpp_order_id']
                     );
                     $purchaseOperation = AllianceHelper::getOperationPurchaseData($eComResponse);
@@ -87,14 +82,7 @@ class ModelExtensionPaymentRefund extends Model
                 }
                 $refundData = $this->prepareRefundData($purchaseOperation, $coinAmount);
 
-                $jwe_token = $this->ecom->authorizeByVirtualDevice(
-                    $this->config->get(
-                        'payment_alliance_service_code_id'
-                    )
-                );
-                $decrypt_auth = $this->ecom->decryptResponse($jwe_token);
                 $data = $this->ecom->proceedRefund(
-                    $decrypt_auth,
                     $this->url,
                     $refundData
                 );
