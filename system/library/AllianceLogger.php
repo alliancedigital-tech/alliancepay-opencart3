@@ -109,6 +109,25 @@ class AllianceLogger
     }
 
     /**
+     * Masks values of sensitive keys (keys, signatures, tokens) recursively.
+     *
+     * @param array $data
+     * @return array
+     */
+    public static function maskSensitive(array $data): array
+    {
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                $data[$key] = self::maskSensitive($value);
+            } elseif (is_string($key) && preg_match('/private|secret|signature|token|jws|password|key(?!id)/i', $key)) {
+                $data[$key] = '***';
+            }
+        }
+
+        return $data;
+    }
+
+    /**
      * @param string $level
      * @param $message
      * @param array $context

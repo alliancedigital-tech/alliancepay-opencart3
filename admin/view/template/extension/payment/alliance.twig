@@ -300,6 +300,61 @@
             </div>
           </div>
 
+          <legend>{{ text_fiscalization }}</legend>
+          <div class="form-group">
+            <div class="col-sm-12">
+              <h5>{{ text_fiscalization_help }}</h5>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="col-sm-2 control-label" for="payment_alliance_fiscalization_enabled">{{ entry_fiscalization_enabled }}</label>
+            <div class="col-sm-10">
+              <select name="payment_alliance_fiscalization_enabled" id="payment_alliance_fiscalization_enabled" class="form-control">
+                <option value="1" {{ payment_alliance_fiscalization_enabled == '1' ? 'selected="selected"' : '' }}>{{ text_enabled }}</option>
+                <option value="0" {{ payment_alliance_fiscalization_enabled != '1' ? 'selected="selected"' : '' }}>{{ text_disabled }}</option>
+              </select>
+              <p class="help-block">{{ help_fiscalization_enabled }}</p>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="col-sm-2 control-label" for="payment_alliance_fiscalization_auto">{{ entry_fiscalization_auto }}</label>
+            <div class="col-sm-10">
+              <select name="payment_alliance_fiscalization_auto" id="payment_alliance_fiscalization_auto" class="form-control">
+                <option value="1" {{ payment_alliance_fiscalization_auto == '1' ? 'selected="selected"' : '' }}>{{ text_enabled }}</option>
+                <option value="0" {{ payment_alliance_fiscalization_auto != '1' ? 'selected="selected"' : '' }}>{{ text_disabled }}</option>
+              </select>
+              <p class="help-block">{{ help_fiscalization_auto }}</p>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="col-sm-2 control-label" for="payment_alliance_fiscalization_tax_code">{{ entry_fiscalization_tax_code }}</label>
+            <div class="col-sm-10">
+              <input type="text" name="payment_alliance_fiscalization_tax_code" id="payment_alliance_fiscalization_tax_code" value="{{ payment_alliance_fiscalization_tax_code }}" class="form-control" />
+              <p class="help-block">{{ help_fiscalization_tax_code }}</p>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="col-sm-2 control-label" for="payment_alliance_fiscalization_classification_code">{{ entry_fiscalization_classification_code }}</label>
+            <div class="col-sm-10">
+              <input type="text" name="payment_alliance_fiscalization_classification_code" id="payment_alliance_fiscalization_classification_code" value="{{ payment_alliance_fiscalization_classification_code }}" class="form-control" />
+              <p class="help-block">{{ help_fiscalization_classification_code }}</p>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="col-sm-2 control-label" for="payment_alliance_fiscalization_excise_labels">{{ entry_fiscalization_excise_labels }}</label>
+            <div class="col-sm-10">
+              <textarea name="payment_alliance_fiscalization_excise_labels" id="payment_alliance_fiscalization_excise_labels" rows="3" class="form-control">{{ payment_alliance_fiscalization_excise_labels }}</textarea>
+              <p class="help-block">{{ help_fiscalization_excise_labels }}</p>
+            </div>
+          </div>
+          <div class="form-group required">
+            <label class="col-sm-2 control-label" for="payment_alliance_fiscalization_measurement_code">{{ entry_fiscalization_measurement_code }}</label>
+            <div class="col-sm-10">
+              <input type="text" name="payment_alliance_fiscalization_measurement_code" id="payment_alliance_fiscalization_measurement_code" value="{{ payment_alliance_fiscalization_measurement_code }}" class="form-control" />
+              <p class="help-block">{{ help_fiscalization_measurement_code }}</p>
+            </div>
+          </div>
+
         </form>
       </div>
     </div>

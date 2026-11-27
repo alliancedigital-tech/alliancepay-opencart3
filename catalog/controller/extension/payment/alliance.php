@@ -56,7 +56,10 @@ class ControllerExtensionPaymentAlliance extends Controller
                 return false;
             }
         } else {
-            $request_data = json_decode($trimmed, true);
+            $this->logger->error('Callback rejected: body is not a JWS');
+            $this->response->addHeader($this->request->server['SERVER_PROTOCOL'] . ' 400 Bad Request');
+
+            return false;
         }
 
         if (!is_array($request_data)) {
@@ -83,6 +86,7 @@ class ControllerExtensionPaymentAlliance extends Controller
         }
 
         $operationId = '';
+        $isPurchaseSuccess = false;
 
         if (!empty($request_data['hppPayType'])
             && $request_data['operation']['type'] !== AllianceConfig::OPERATION_TYPE_REFUND
@@ -92,6 +96,7 @@ class ControllerExtensionPaymentAlliance extends Controller
             if (!empty($purchaseOperation)) {
                 $operationId = AllianceHelper::getPurchaseOperationId($purchaseOperation);
                 $purchaseStatus = AllianceHelper::getPurchaseOperationStatus($purchaseOperation);
+                $isPurchaseSuccess = $purchaseStatus === AllianceConfig::ALLIANCE_ORDER_SUCCESS_STATUS;
 
                 $this->handleOrderStatusChange(
                     $purchaseStatus,
@@ -113,6 +118,14 @@ class ControllerExtensionPaymentAlliance extends Controller
             $alliance_order['order_id'],
             $operationId
         );
+
+        if ($isPurchaseSuccess) {
+            $this->autoFiscalize((int)$alliance_order['order_id']);
+        }
+
+        if (($request_data['operation']['type'] ?? '') === AllianceConfig::OPERATION_TYPE_REFUND) {
+            $this->fiscalizeRefundOperation((int)$alliance_order['order_id'], (array)$request_data['operation']);
+        }
 
         return true;
     }
@@ -162,6 +175,37 @@ class ControllerExtensionPaymentAlliance extends Controller
 
         $this->response->addHeader('Content-Type: application/json');
         $this->response->setOutput(json_encode($json));
+    }
+
+    /**
+     * @param int $orderId
+     * @param array $operation
+     * @return void
+     */
+    private function fiscalizeRefundOperation(int $orderId, array $operation): void
+    {
+        try {
+            require_once DIR_SYSTEM . 'library/AllianceFiscalizationService.php';
+            (new AllianceFiscalizationService($this->registry))->onRefundOperation($orderId, $operation);
+        } catch (\Throwable $e) {
+            $this->logger->error('Refund fiscalization failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Automatic fiscalization must never break payment processing.
+     *
+     * @param int $orderId
+     * @return void
+     */
+    private function autoFiscalize(int $orderId): void
+    {
+        try {
+            require_once DIR_SYSTEM . 'library/AllianceFiscalizationService.php';
+            (new AllianceFiscalizationService($this->registry))->autoFiscalizePurchase($orderId);
+        } catch (\Throwable $e) {
+            $this->logger->error('Auto fiscalization failed: ' . $e->getMessage());
+        }
     }
 
     /**

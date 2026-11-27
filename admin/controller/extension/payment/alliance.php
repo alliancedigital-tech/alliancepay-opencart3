@@ -10,7 +10,7 @@ declare(strict_types=1);
  */
 class ControllerExtensionPaymentAlliance extends Controller
 {
-    public $version = '1.7.0';
+    public $version = '1.8.0';
     private $events = [
         [
             'trigger'    => 'admin/view/sale/order_info/after',
@@ -36,6 +36,42 @@ class ControllerExtensionPaymentAlliance extends Controller
             'event_code' => 'alliance_order_refund_data',
             'sort_order' => 1,
         ],
+        [
+            'trigger'    => 'admin/view/sale/order_info/after',
+            'action'     => 'extension/payment/fiscalization/orderBlock',
+            'event_code' => 'alliance_fiscalization_order_block',
+            'sort_order' => 3,
+        ],
+        [
+            'trigger'    => 'admin/view/catalog/product_form/after',
+            'action'     => 'extension/payment/fiscalization/productFormTab',
+            'event_code' => 'alliance_fiscalization_product_form',
+            'sort_order' => 1,
+        ],
+        [
+            'trigger'    => 'admin/model/catalog/product/addProduct/after',
+            'action'     => 'extension/payment/fiscalization/productAdded',
+            'event_code' => 'alliance_fiscalization_product_add',
+            'sort_order' => 1,
+        ],
+        [
+            'trigger'    => 'admin/model/catalog/product/editProduct/after',
+            'action'     => 'extension/payment/fiscalization/productEdited',
+            'event_code' => 'alliance_fiscalization_product_edit',
+            'sort_order' => 1,
+        ],
+        [
+            'trigger'    => 'admin/model/catalog/product/deleteProduct/after',
+            'action'     => 'extension/payment/fiscalization/productDeleted',
+            'event_code' => 'alliance_fiscalization_product_delete',
+            'sort_order' => 1,
+        ],
+    ];
+
+    private $permissionRoutes = [
+        'extension/payment/refund',
+        'extension/payment/alliance',
+        'extension/payment/fiscalization',
     ];
 
     /**
@@ -68,6 +104,15 @@ class ControllerExtensionPaymentAlliance extends Controller
                     $this->language->get('error_a2a_uah_only'),
                     $siteCurrency
                 );
+                $this->response->redirect(
+                    $this->url->link('extension/payment/alliance', 'user_token=' . $this->getUserToken(), true)
+                );
+                return;
+            }
+
+            $fiscalizationError = $this->validateFiscalizationSettings($post);
+            if ($fiscalizationError !== null) {
+                $this->session->data['warning'] = $fiscalizationError;
                 $this->response->redirect(
                     $this->url->link('extension/payment/alliance', 'user_token=' . $this->getUserToken(), true)
                 );
@@ -136,18 +181,15 @@ class ControllerExtensionPaymentAlliance extends Controller
             'payment_alliance_fail_url' => $catalog_url . 'index.php?route=checkout/failure',
             'payment_alliance_debug' => '0',
             'payment_alliance_version' => '0.0.2',
+            'payment_alliance_fiscalization_enabled' => '0',
+            'payment_alliance_fiscalization_auto' => '0',
+            'payment_alliance_fiscalization_measurement_code' => '0001',
             'payment_alliance_hpp_payment_methods' => json_encode(['CARD', 'APPLE_PAY', 'GOOGLE_PAY']),
         ];
 
         $permissions = [
-            'access' => [
-                'extension/payment/refund',
-                'extension/payment/alliance'
-            ],
-            'modify' => [
-                'extension/payment/refund',
-                'extension/payment/alliance'
-            ]
+            'access' => $this->permissionRoutes,
+            'modify' => $this->permissionRoutes,
         ];
 
         foreach ($permissions as $type => $routes) {
@@ -176,14 +218,8 @@ class ControllerExtensionPaymentAlliance extends Controller
         $this->load->model('user/user_group');
 
         $permissions = [
-            'access' => [
-                'extension/payment/refund',
-                'extension/payment/alliance'
-            ],
-            'modify' => [
-                'extension/payment/refund',
-                'extension/payment/alliance'
-            ]
+            'access' => $this->permissionRoutes,
+            'modify' => $this->permissionRoutes
         ];
 
         foreach ($permissions as $type => $routes) {
@@ -213,20 +249,51 @@ class ControllerExtensionPaymentAlliance extends Controller
     }
 
     /**
+     * Upgrades an already installed module without touching existing settings.
+     *
      * @return void
      */
-    public function upgrade() {
+    public function upgrade()
+    {
         $this->load->model('extension/payment/db');
-        $this->model_extension_payment_db->updateAllianceOrderTable();
         $this->load->model('setting/setting');
-        $this->model_setting_setting->editSetting('payment_alliance', ['payment_alliance_version' => '1.0.0']);
+        $this->load->model('user/user_group');
+
+        $this->model_extension_payment_db->updateAllianceOrderTable();
+        $this->model_extension_payment_db->initFiscalizationDB();
 
         if (empty($this->config->get('payment_alliance_hpp_payment_methods'))) {
             $legacy = $this->config->get('payment_alliance_subscription_hpp_payment_methods');
-            $this->model_setting_setting->editSetting('payment_alliance', [
-                'payment_alliance_hpp_payment_methods' => $legacy ?: json_encode(['CARD', 'APPLE_PAY', 'GOOGLE_PAY']),
-            ]);
+            $this->model_extension_payment_db->saveSettingValue(
+                'payment_alliance_hpp_payment_methods',
+                $legacy ?: json_encode(['CARD', 'APPLE_PAY', 'GOOGLE_PAY'])
+            );
         }
+
+        $fiscalizationDefaults = [
+            'payment_alliance_fiscalization_enabled' => '0',
+            'payment_alliance_fiscalization_auto' => '0',
+            'payment_alliance_fiscalization_measurement_code' => '0001',
+        ];
+        foreach ($fiscalizationDefaults as $key => $value) {
+            if ($this->config->get($key) === null) {
+                $this->model_extension_payment_db->saveSettingValue($key, $value);
+                $this->config->set($key, $value);
+            }
+        }
+
+        foreach (['access', 'modify'] as $type) {
+            $this->model_user_user_group->addPermission(
+                $this->user->getGroupId(),
+                $type,
+                'extension/payment/fiscalization'
+            );
+        }
+
+        $this->installEvents();
+
+        $this->model_extension_payment_db->saveSettingValue('payment_alliance_version', $this->version);
+        $this->config->set('payment_alliance_version', $this->version);
     }
 
     /**
@@ -521,6 +588,44 @@ class ControllerExtensionPaymentAlliance extends Controller
 
         $this->response->addHeader('Content-Type: application/json');
         $this->response->setOutput(json_encode($json));
+    }
+
+    /**
+     * Normalizes fiscalization fields in place and returns an error text or null.
+     *
+     * @param array $post
+     * @return string|null
+     */
+    private function validateFiscalizationSettings(array &$post): ?string
+    {
+        $prefix = 'payment_alliance_fiscalization_';
+        $taxCode = trim((string)($post[$prefix . 'tax_code'] ?? ''));
+        $classification = trim((string)($post[$prefix . 'classification_code'] ?? ''));
+        $measurement = trim((string)($post[$prefix . 'measurement_code'] ?? ''));
+        $labels = preg_split('/[\s,;]+/', (string)($post[$prefix . 'excise_labels'] ?? ''), -1, PREG_SPLIT_NO_EMPTY);
+
+        $post[$prefix . 'tax_code'] = $taxCode;
+        $post[$prefix . 'classification_code'] = $classification;
+        $post[$prefix . 'measurement_code'] = $measurement;
+        $post[$prefix . 'excise_labels'] = implode(',', $labels);
+
+        if ($taxCode !== '' && !preg_match('/^\d+$/', $taxCode)) {
+            return $this->language->get('error_fiscalization_tax_code');
+        }
+
+        if ($classification !== '' && !preg_match('/^\d+$/', $classification)) {
+            return $this->language->get('error_fiscalization_classification_code');
+        }
+
+        if (in_array($taxCode, ['2', '7', '8'], true) && $classification === '') {
+            return $this->language->get('error_fiscalization_classification_required');
+        }
+
+        if ($measurement === '') {
+            return $this->language->get('error_fiscalization_measurement_code');
+        }
+
+        return null;
     }
 
     /**

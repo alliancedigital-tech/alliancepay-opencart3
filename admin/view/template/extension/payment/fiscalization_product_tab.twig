@@ -1,0 +1,31 @@
+<div class="tab-pane" id="tab-alliancepay-fiscalization">
+  <div class="alert alert-info">{{ fisc_product_help }}</div>
+  <div class="form-group">
+    <label class="col-sm-2 control-label" for="input-alliancepay-tax-code">{{ fisc_product_tax_code }}</label>
+    <div class="col-sm-10">
+      <input type="text" name="alliancepay_fiscalization[tax_code]" value="{{ tax_code }}" id="input-alliancepay-tax-code" class="form-control" pattern="[0-9]*" />
+      <p class="help-block">{{ help_fiscalization_tax_code }}</p>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="col-sm-2 control-label" for="input-alliancepay-classification-code">{{ fisc_product_classification_code }}</label>
+    <div class="col-sm-10">
+      <input type="text" name="alliancepay_fiscalization[classification_code]" value="{{ classification_code }}" id="input-alliancepay-classification-code" class="form-control" pattern="[0-9]*" />
+      <p class="help-block">{{ help_fiscalization_classification_code }}</p>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="col-sm-2 control-label" for="input-alliancepay-excise-labels">{{ fisc_product_excise_labels }}</label>
+    <div class="col-sm-10">
+      <textarea name="alliancepay_fiscalization[excise_labels]" rows="3" id="input-alliancepay-excise-labels" class="form-control">{{ excise_labels }}</textarea>
+      <p class="help-block">{{ help_fiscalization_excise_labels }}</p>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="col-sm-2 control-label" for="input-alliancepay-measurement-code">{{ fisc_product_measurement_code }}</label>
+    <div class="col-sm-10">
+      <input type="text" name="alliancepay_fiscalization[measurement_code]" value="{{ measurement_code }}" id="input-alliancepay-measurement-code" class="form-control" />
+      <p class="help-block">{{ help_fiscalization_measurement_code }}</p>
+    </div>
+  </div>
+</div>

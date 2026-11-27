@@ -87,4 +87,18 @@ class AllianceHelper
 
         return $operationId;
     }
+
+    /**
+     * Converts an amount in currency units to minor units (coins).
+     *
+     * @param float $itemAmount
+     * @return int
+     */
+    public static function toCoinAmount(float $itemAmount): int
+    {
+        $amount = number_format($itemAmount, 4, '.', '');
+        $amount = str_replace([' ', ','], ['', '.'], $amount);
+
+        return (int)round((float)$amount * 100);
+    }
 }

@@ -11,6 +11,7 @@ use SimpleJWT\JWT;
 use SimpleJWT\Keys\ECKey;
 use SimpleJWT\Keys\KeyFactory;
 use SimpleJWT\Keys\KeySet;
+use SimpleJWT\Keys\RSAKey;
 use SimpleJWT\InvalidTokenException;
 
 /**
@@ -25,6 +26,16 @@ class AllianceEcom
     const CHECK_OPERATIONS = 'ecom/jws/payments/hpp/operations_v1';
 
     const COMPLETE_PAYMENT = 'ecom/jws/payments/preauth/completion_v1';
+
+    const FISCALIZATION_CREATE = 'ecom/jws/cashbox/v2/fiscalization/create';
+
+    const NOTIFICATION_URL_ROUTE_FISCALIZATION = 'extension/payment/alliance_fiscalization/callback';
+
+    const ALLOWED_VERIFY_ALGORITHMS = ['ES256'];
+
+    const FISCALIZATION_TIMEOUT = 20;
+
+    const FISCALIZATION_CONNECT_TIMEOUT = 10;
 
     const GET_PUBLIC_KEY = 'ecom/keys/public_key/get_v1';
 
@@ -209,13 +220,14 @@ class AllianceEcom
 
         try {
             $key = KeyFactory::create($privateKeyPem, 'pem');
+            $alg = $this->resolveSigningAlgorithm($key);
             $key->setKeyId($kid);
             $keySet = new KeySet();
             $keySet->add($key);
 
             $jwt = new JWT(
                 [
-                    'alg' => 'RS256',
+                    'alg' => $alg,
                     'ts' => (string)(int)(microtime(true) * 1000),
                     'targetUrl' => '/' . ltrim($endpoint, '/'),
                     'kid' => $kid,
@@ -229,6 +241,32 @@ class AllianceEcom
             $this->logger->log(AllianceLogger::ERROR, 'JWS signing failed: ' . $e->getMessage());
             throw $e;
         }
+    }
+
+    /**
+     * EC key → ES256 (P-256 only), RSA key → RS256 (backward compatibility).
+     *
+     * @param \SimpleJWT\Keys\Key $key
+     * @return string
+     */
+    private function resolveSigningAlgorithm($key): string
+    {
+        if ($key instanceof ECKey) {
+            $curve = $key->getCurve();
+            if ($curve !== 'P-256') {
+                throw new \RuntimeException(
+                    'JWS Private Key must use the P-256 curve for ES256, got: ' . (string)$curve
+                );
+            }
+
+            return 'ES256';
+        }
+
+        if ($key instanceof RSAKey) {
+            return 'RS256';
+        }
+
+        throw new \RuntimeException('JWS Private Key must be an EC (P-256) or RSA key.');
     }
 
     /**
@@ -270,6 +308,10 @@ class AllianceEcom
 
         if (empty($kid) || empty($alg)) {
             throw new \RuntimeException('JWS: missing kid or alg in header.');
+        }
+
+        if (!in_array($alg, self::ALLOWED_VERIFY_ALGORITHMS, true)) {
+            throw new \RuntimeException('JWS: unsupported alg ' . (string)$alg);
         }
 
         $jwk = $this->fetchBankPublicKey($kid);
@@ -387,6 +429,44 @@ class AllianceEcom
         }
 
         return $refundResult;
+    }
+
+    /**
+     * Sends a fiscalization request.
+     * Returns ['http_status' => int, 'data' => array]; business errors (HTTP 400) are returned,
+     * everything else (network, timeout, 5xx, invalid signature) is thrown.
+     *
+     * @param array $body
+     * @return array
+     * @throws Throwable
+     */
+    public function createFiscalization(array $body): array
+    {
+        $options = [
+            'headers' => $this->getJwsRequestHeaders(),
+            'body' => $this->signJwsRequest(self::FISCALIZATION_CREATE, $body),
+            'timeout' => self::FISCALIZATION_TIMEOUT,
+            'connect_timeout' => self::FISCALIZATION_CONNECT_TIMEOUT,
+        ];
+
+        try {
+            $response = $this->client->request(self::FISCALIZATION_CREATE, $options);
+        } catch (\GuzzleHttp\Exception\RequestException $e) {
+            $errorResponse = $e->getResponse();
+            if ($errorResponse !== null && (int)$errorResponse->getStatusCode() === 400) {
+                return [
+                    'http_status' => 400,
+                    'data' => $this->parseResponse($errorResponse),
+                ];
+            }
+
+            throw $e;
+        }
+
+        return [
+            'http_status' => (int)$response->getStatusCode(),
+            'data' => $this->parseResponse($response),
+        ];
     }
 
     /**

@@ -56,7 +56,37 @@ class ModelExtensionPaymentData extends Model
             'help_preauth_status' => $this->language->get('help_preauth_status'),
             'entry_completion_status' => $this->language->get('entry_completion_status'),
             'help_completion_status' => $this->language->get('help_completion_status'),
+        ] + $this->getFiscalizationLanguageData();
+    }
+
+    /**
+     * @return array
+     */
+    private function getFiscalizationLanguageData(): array
+    {
+        $keys = [
+            'text_fiscalization',
+            'text_fiscalization_help',
+            'entry_fiscalization_enabled',
+            'help_fiscalization_enabled',
+            'entry_fiscalization_auto',
+            'help_fiscalization_auto',
+            'entry_fiscalization_tax_code',
+            'help_fiscalization_tax_code',
+            'entry_fiscalization_classification_code',
+            'help_fiscalization_classification_code',
+            'entry_fiscalization_excise_labels',
+            'help_fiscalization_excise_labels',
+            'entry_fiscalization_measurement_code',
+            'help_fiscalization_measurement_code',
         ];
+
+        $result = [];
+        foreach ($keys as $key) {
+            $result[$key] = $this->language->get($key);
+        }
+
+        return $result;
     }
 
     /**
@@ -120,6 +150,20 @@ class ModelExtensionPaymentData extends Model
                 ?? $config->get('payment_alliance_jws_private_key'),
             'payment_alliance_jws_key_id' => $post['payment_alliance_jws_key_id']
                 ?? $config->get('payment_alliance_jws_key_id'),
+            'payment_alliance_fiscalization_enabled' => $post['payment_alliance_fiscalization_enabled']
+                ?? $config->get('payment_alliance_fiscalization_enabled'),
+            'payment_alliance_fiscalization_auto' => $post['payment_alliance_fiscalization_auto']
+                ?? $config->get('payment_alliance_fiscalization_auto'),
+            'payment_alliance_fiscalization_tax_code' => $post['payment_alliance_fiscalization_tax_code']
+                ?? $config->get('payment_alliance_fiscalization_tax_code'),
+            'payment_alliance_fiscalization_classification_code'
+                => $post['payment_alliance_fiscalization_classification_code']
+                ?? $config->get('payment_alliance_fiscalization_classification_code'),
+            'payment_alliance_fiscalization_excise_labels' => $post['payment_alliance_fiscalization_excise_labels']
+                ?? $config->get('payment_alliance_fiscalization_excise_labels'),
+            'payment_alliance_fiscalization_measurement_code'
+                => $post['payment_alliance_fiscalization_measurement_code']
+                ?? ($config->get('payment_alliance_fiscalization_measurement_code') ?: '0001'),
             'payment_alliance_hpp_payment_methods' => $post['payment_alliance_hpp_payment_methods']
                 ?? (json_decode((string)$config->get('payment_alliance_hpp_payment_methods'), true) ?: ['CARD']),
             'payment_alliance_fail_url' => $this->resolveUrl(

@@ -86,6 +86,77 @@ class ModelExtensionPaymentDb extends Model
             KEY `merchant_id` (`merchant_id`),
             KEY `order_id` (`order_id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;");
+
+        $this->initFiscalizationDB();
+    }
+
+    /**
+     * Creates fiscalization tables (safe to call on already installed module).
+     *
+     * @return void
+     */
+    public function initFiscalizationDB()
+    {
+        $this->db->query("CREATE TABLE IF NOT EXISTS `" . DB_PREFIX . "alliancepay_fiscalization`
+        (
+            `id` INT(11) NOT NULL AUTO_INCREMENT,
+            `order_id` INT(11) NOT NULL,
+            `store_id` INT(11) DEFAULT NULL,
+            `operation_id` VARCHAR(64) NOT NULL,
+            `operation_type` VARCHAR(16) NOT NULL,
+            `merchant_request_id` VARCHAR(64) NOT NULL,
+            `bucket_id` VARCHAR(64) DEFAULT NULL,
+            `status` VARCHAR(16) NOT NULL,
+            `receipt_comment` VARCHAR(255) DEFAULT NULL,
+            `fiscal_number` VARCHAR(64) DEFAULT NULL,
+            `receipt_url` TEXT,
+            `fiscalization_date_time` DATETIME DEFAULT NULL,
+            `fiscalization_modification_date_time` DATETIME DEFAULT NULL,
+            `error_code` VARCHAR(32) DEFAULT NULL,
+            `error_description` TEXT,
+            `request_payload` LONGTEXT,
+            `response_payload` LONGTEXT,
+            `callback_payload` LONGTEXT,
+            `created_at` DATETIME NOT NULL,
+            `updated_at` DATETIME NOT NULL,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `uniq_operation_id` (`operation_id`),
+            UNIQUE KEY `uniq_merchant_request_id` (`merchant_request_id`),
+            KEY `idx_order_id` (`order_id`),
+            KEY `idx_bucket_id` (`bucket_id`),
+            KEY `idx_status` (`status`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;");
+
+        $this->db->query("CREATE TABLE IF NOT EXISTS `" . DB_PREFIX . "alliancepay_fiscalization_product`
+        (
+            `product_id` INT(11) NOT NULL,
+            `tax_code` INT(11) DEFAULT NULL,
+            `classification_code` VARCHAR(32) DEFAULT NULL,
+            `excise_labels` TEXT,
+            `measurement_code` VARCHAR(16) DEFAULT NULL,
+            PRIMARY KEY (`product_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;");
+    }
+
+    /**
+     * Inserts or replaces a single module setting without touching the others
+     * (OpenCart 3 editSettingValue() only updates existing rows).
+     *
+     * @param string $key
+     * @param string $value
+     * @return void
+     */
+    public function saveSettingValue(string $key, string $value)
+    {
+        $this->db->query(
+            "DELETE FROM `" . DB_PREFIX . "setting` WHERE `store_id` = '0' AND `code` = 'payment_alliance'"
+            . " AND `key` = '" . $this->db->escape($key) . "'"
+        );
+        $this->db->query(
+            "INSERT INTO `" . DB_PREFIX . "setting` SET `store_id` = '0', `code` = 'payment_alliance',"
+            . " `key` = '" . $this->db->escape($key) . "', `value` = '" . $this->db->escape($value) . "',"
+            . " `serialized` = '0'"
+        );
     }
 
     /**

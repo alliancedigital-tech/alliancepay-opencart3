@@ -158,11 +158,11 @@ class ModelExtensionPaymentAlliance extends Model
         $implode = [];
 
         if (!empty($data['orderStatus'])) {
-            $implode[] = "`order_status` = '" . $data['orderStatus'] . "'";
+            $implode[] = "`order_status` = '" . $this->db->escape((string)$data['orderStatus']) . "'";
         }
 
         if (!empty($operationId)) {
-            $implode[] = "`operation_id` = '" . $operationId . "'";
+            $implode[] = "`operation_id` = '" . $this->db->escape($operationId) . "'";
         }
 
         $conversionRate = $data['operation']['conversionRate'] ?? null;
@@ -181,7 +181,7 @@ class ModelExtensionPaymentAlliance extends Model
             $sql .= implode(', ', $implode);
         }
 
-        $sql .= " WHERE `order_id` = '" . $order_id . "'";
+        $sql .= " WHERE `order_id` = '" . (int)$order_id . "'";
 
         $this->db->query($sql);
     }

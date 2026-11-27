@@ -107,6 +107,13 @@ class ModelExtensionPaymentRefund extends Model
                     );
                 }
                 $this->proceedReturn($orderId, $isFullReturn, $productIds);
+                $this->registerRefundFiscalization(
+                    (int) $orderId,
+                    (array) $data,
+                    (array) $productIds,
+                    (bool) $isFullReturn,
+                    (bool) $refundShipping
+                );
             } catch (Exception $e) {
                 $data['message'] = $e->getMessage();
                 $data['error'] = true;
@@ -127,6 +134,37 @@ class ModelExtensionPaymentRefund extends Model
         }
 
         return $data;
+    }
+
+    /**
+     * Fiscalization must never break the refund flow.
+     *
+     * @param int $orderId
+     * @param array $refundResult
+     * @param array $productIds
+     * @param bool $isFullReturn
+     * @param bool $refundShipping
+     * @return void
+     */
+    private function registerRefundFiscalization(
+        int $orderId,
+        array $refundResult,
+        array $productIds,
+        bool $isFullReturn,
+        bool $refundShipping
+    ): void {
+        try {
+            require_once DIR_SYSTEM . 'library/AllianceFiscalizationService.php';
+            (new AllianceFiscalizationService($this->registry))->registerRefund(
+                $orderId,
+                $refundResult,
+                $productIds,
+                $isFullReturn,
+                $refundShipping
+            );
+        } catch (\Throwable $e) {
+            $this->logger->log(AllianceLogger::ERROR, 'Refund fiscalization failed: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -282,10 +320,7 @@ class ModelExtensionPaymentRefund extends Model
      */
     public static function toCoinAmount(float $itemAmount): int
     {
-        $amount = number_format($itemAmount, 4, '.', '');
-        $amount = str_replace([' ', ','], ['', '.'], $amount);
-
-        return (int)round((float)$amount * 100);
+        return AllianceHelper::toCoinAmount($itemAmount);
     }
 
     /** @deprecated Use toCoinAmount() instead */

@@ -1,0 +1,113 @@
+<div class="panel panel-default" id="alliancepay-fiscalization-block">
+  <div class="panel-heading">
+    <h3 class="panel-title"><i class="fa fa-file-text-o"></i> {{ fisc_block_title }}</h3>
+  </div>
+  <div class="panel-body">
+    <div id="alliancepay-fiscalization-message"></div>
+    {% if rows %}
+      <div class="table-responsive">
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <td>{{ fisc_col_type }}</td>
+              <td>{{ fisc_col_status }}</td>
+              <td>{{ fisc_col_number }}</td>
+              <td>{{ fisc_col_receipt }}</td>
+              <td>{{ fisc_col_date }}</td>
+              <td>{{ fisc_col_error }}</td>
+              <td></td>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+              <tr>
+                <td>{{ row.type }}</td>
+                <td>{{ row.status }}</td>
+                <td>{{ row.fiscal_number }}</td>
+                <td>{% if row.receipt_url %}<a href="{{ row.receipt_url }}" target="_blank" rel="noopener noreferrer">{{ fisc_receipt_link }}</a>{% endif %}</td>
+                <td>{{ row.date }}</td>
+                <td>{{ row.error }}</td>
+                <td class="text-right">
+                  {% if can_modify %}
+                    <button type="button" class="btn btn-primary btn-sm alliancepay-fiscalization-action" data-record="{{ row.id }}" data-mode="{{ row.action }}">
+                      {% if row.action == 'send' %}{{ fisc_btn_fiscalize }}{% else %}{{ fisc_btn_refresh }}{% endif %}
+                    </button>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-muted">{{ fisc_empty }}</p>
+    {% endif %}
+    {% if can_modify and refund_rows %}
+      {% for refund in refund_rows %}
+        <p>
+          {{ fisc_refund_label }} {{ refund.amount }} ({{ refund.status }})
+          <button type="button" class="btn btn-primary btn-sm alliancepay-fiscalization-refund" data-operation="{{ refund.operation_id }}">{{ fisc_btn_fiscalize_refund }}</button>
+        </p>
+      {% endfor %}
+    {% endif %}
+    {% if can_modify and show_purchase_button %}
+      <button type="button" class="btn btn-primary" id="alliancepay-fiscalization-purchase">{{ fisc_btn_fiscalize }}</button>
+    {% endif %}
+  </div>
+</div>
+<script>
+(function () {
+  var box = document.getElementById('alliancepay-fiscalization-message');
+
+  function show(result) {
+    box.innerHTML = '';
+    var alert = document.createElement('div');
+    alert.className = 'alert ' + (result.success ? 'alert-success' : 'alert-danger');
+    alert.textContent = result.message || '';
+    box.appendChild(alert);
+    if (result.success) {
+      setTimeout(function () { location.reload(); }, 1200);
+    }
+  }
+
+  function send(url, body, button) {
+    button.disabled = true;
+    fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: body
+    }).then(function (r) { return r.json(); })
+      .then(show)
+      .catch(function () { show({success: false, message: 'Error'}); })
+      .then(function () { button.disabled = false; });
+  }
+
+  var purchase = document.getElementById('alliancepay-fiscalization-purchase');
+  if (purchase) {
+    purchase.addEventListener('click', function () {
+      send({{ purchase_url|json_encode|raw }}, 'order_id=' + encodeURIComponent({{ order_id|json_encode|raw }}), purchase);
+    });
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('.alliancepay-fiscalization-refund'), function (button) {
+    button.addEventListener('click', function () {
+      send(
+        {{ refund_url|json_encode|raw }},
+        'operation_id=' + encodeURIComponent(button.getAttribute('data-operation')),
+        button
+      );
+    });
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('.alliancepay-fiscalization-action'), function (button) {
+    button.addEventListener('click', function () {
+      send(
+        {{ action_url|json_encode|raw }},
+        'record_id=' + encodeURIComponent(button.getAttribute('data-record'))
+          + '&mode=' + encodeURIComponent(button.getAttribute('data-mode')),
+        button
+      );
+    });
+  });
+})();
+</script>
