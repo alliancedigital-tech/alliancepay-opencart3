@@ -1,7 +1,7 @@
 {
     "name": "alliance/opencart-alliancepay",
     "description": "Alliance Bank payment gateway for OpenCart",
-    "version": "1.8.0",
+    "version": "1.8.1",
     "type": "opencart-extension",
     "license": "GPL-3.0-or-later",
     "require": {
